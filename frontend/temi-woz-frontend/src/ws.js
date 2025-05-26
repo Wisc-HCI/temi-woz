@@ -1,16 +1,16 @@
 let socket;
 
 export function connectWebSocket(onMessage) {
-  socket = new WebSocket("ws://localhost:9090/control");
+  socket = new WebSocket("ws://localhost:8000/control");
 
   socket.onopen = () => {
     console.log("WebSocket connected");
-    socket.send(JSON.stringify({ type: "identify", role: "wizard" }));
+    socket.send(JSON.stringify({ command: "identify", payload: "wizard" }));
   };
 
   socket.onmessage = (event) => {
     const data = JSON.parse(event.data);
-    console.log("Received2:", data);
+    console.log("Received:", data);
     onMessage?.(data);
   };
 
@@ -23,7 +23,7 @@ export function connectWebSocket(onMessage) {
   };
 }
 
-export function sendMessage(message) {
+export function sendMessageWS(message) {
   if (socket && socket.readyState === WebSocket.OPEN) {
     socket.send(JSON.stringify(message));
   } else {

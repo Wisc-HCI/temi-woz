@@ -102,6 +102,7 @@ def generate_response(all_messages, img_path=None):
         )
 
         res = ans.choices[0].message.content
+        token_output = ans.usage.completion_tokens
     except Exception as e:
         print(f'[ERROR][generate_response]: {e}')
     return res
