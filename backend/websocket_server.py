@@ -130,6 +130,9 @@ class WebSocketServer:
             self.last_displayed = None
             await self.send_message(PATH_TEMI, msg_json)
 
+        elif msg_json['command'] in ['skidJoy', 'navigateCamera', 'takePicture']:
+            await self.send_message(PATH_TEMI, msg_json)
+
         elif msg_json['command'] == 'capturePhoto':
             # TODO: behavior should differ depending on 
             # self.behavior_mode

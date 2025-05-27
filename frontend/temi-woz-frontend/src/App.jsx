@@ -194,8 +194,8 @@ function App() {
                         "btn-primary"}`
                     }
                     onClick={() => sendMessage({
-                      command: "goTo",
-                      payload: "room 1"
+                      command: "skidJoy",
+                      payload: "(0, 1)"
                     })}>
                   Left
                 </button>
@@ -208,8 +208,8 @@ function App() {
                         "btn-primary"}`
                     }
                     onClick={() => sendMessage({
-                      command: "goTo",
-                      payload: "room 2"
+                      command: "skidJoy",
+                      payload: "(0, -1)"
                     })}>
                   Right
                 </button>
@@ -222,8 +222,8 @@ function App() {
                         "btn-primary"}`
                     }
                     onClick={() => sendMessage({
-                      command: "goTo",
-                      payload: "room 1"
+                      command: "skidJoy",
+                      payload: "(0.5, 0)"
                     })}>
                   Forward
                 </button>
@@ -236,8 +236,8 @@ function App() {
                         "btn-primary"}`
                     }
                     onClick={() => sendMessage({
-                      command: "goTo",
-                      payload: "room 2"
+                      command: "skidJoy",
+                      payload: "(-0.5, 0)"
                     })}>
                   Back
                 </button>
@@ -246,17 +246,27 @@ function App() {
 
 
             <div className="row mt-2">
-              <div className="col-sm-4">
+              <div className="col-sm-3">
                 <button
                     className="btn w-100 btn-primary"
                     onClick={() => sendMessage({
-                      command: "capturePhoto",
+                      command: "navigateCamera",
+                      payload: ""
+                    })}>
+                  Display Camera
+                </button>
+              </div>
+              <div className="col-sm-3">
+                <button
+                    className="btn w-100 btn-primary"
+                    onClick={() => sendMessage({
+                      command: "takePicture",
                       payload: ""
                     })}>
                   Take Picture
                 </button>
               </div>
-              <div className="col-sm-4">
+              <div className="col-sm-3">
                 <button
                     className="btn w-100 btn-primary"
                     onClick={() => sendMessage({
@@ -266,7 +276,7 @@ function App() {
                   Start Video
                 </button>
               </div>
-              <div className="col-sm-4">
+              <div className="col-sm-3">
                 <button
                     className="btn w-100 btn-primary"
                     onClick={() => sendMessage({
@@ -279,7 +289,7 @@ function App() {
             </div>
 
             <div className="row mt-2">
-              <div className="col-sm-4">
+              <div className="col-sm-3">
                 <button
                     className="btn w-100 btn-primary"
                     onClick={() => sendMessage({
