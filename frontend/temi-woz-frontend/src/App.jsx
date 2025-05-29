@@ -194,8 +194,8 @@ function App() {
                         "btn-primary"}`
                     }
                     onClick={() => sendMessage({
-                      command: "skidJoy",
-                      payload: "(0, 1)"
+                      command: "turnBy",
+                      payload: "10"
                     })}>
                   Left
                 </button>
@@ -208,8 +208,8 @@ function App() {
                         "btn-primary"}`
                     }
                     onClick={() => sendMessage({
-                      command: "skidJoy",
-                      payload: "(0, -1)"
+                      command: "turnBy",
+                      payload: "-10"
                     })}>
                   Right
                 </button>
@@ -244,9 +244,52 @@ function App() {
               </div>
             </div>
 
-
             <div className="row mt-2">
               <div className="col-sm-3">
+                <button
+                    className="btn w-100 btn-primary"
+                    onClick={() => sendMessage({
+                      command: "tiltBy",
+                      payload: "5"
+                    })}>
+                  Up
+                </button>
+              </div>
+              <div className="col-sm-3">
+                <button
+                    className="btn w-100 btn-primary"
+                    onClick={() => sendMessage({
+                      command: "tiltBy",
+                      payload: "-5"
+                    })}>
+                  Down
+                </button>
+              </div>
+              <div className="col-sm-3">
+                <button
+                    className="btn w-100 btn-primary"
+                    onClick={() => sendMessage({
+                      command: "tiltAngle",
+                      payload: "0"
+                    })}>
+                  👀 ahead
+                </button>
+              </div>
+              <div className="col-sm-3">
+                <button
+                    className="btn w-100 btn-danger"
+                    onClick={() => sendMessage({
+                      command: "stopMovement",
+                      payload: ""
+                    })}>
+                  STOP
+                </button>
+              </div>
+            </div>
+
+
+            <div className="row mt-2">
+              <div className="col-sm-6">
                 <button
                     className="btn w-100 btn-primary"
                     onClick={() => sendMessage({
@@ -256,7 +299,21 @@ function App() {
                   Display Camera
                 </button>
               </div>
-              <div className="col-sm-3">
+              <div className="col-sm-6">
+                <button
+                    className="btn w-100 btn-primary"
+                    onClick={() => sendMessage({
+                      command: "displayFace",
+                      payload: ""
+                    })}>
+                  Display Face
+                </button>
+              </div>
+              
+            </div>
+
+            <div className="row mt-2">
+              <div className="col-sm-4">
                 <button
                     className="btn w-100 btn-primary"
                     onClick={() => sendMessage({
@@ -266,7 +323,7 @@ function App() {
                   Take Picture
                 </button>
               </div>
-              <div className="col-sm-3">
+              <div className="col-sm-4">
                 <button
                     className="btn w-100 btn-primary"
                     onClick={() => sendMessage({
@@ -276,7 +333,7 @@ function App() {
                   Start Video
                 </button>
               </div>
-              <div className="col-sm-3">
+              <div className="col-sm-4">
                 <button
                     className="btn w-100 btn-primary"
                     onClick={() => sendMessage({
@@ -284,19 +341,6 @@ function App() {
                       payload: ""
                     })}>
                   Stop Video
-                </button>
-              </div>
-            </div>
-
-            <div className="row mt-2">
-              <div className="col-sm-3">
-                <button
-                    className="btn w-100 btn-primary"
-                    onClick={() => sendMessage({
-                      command: "displayFace",
-                      payload: ""
-                    })}>
-                  Display Face
                 </button>
               </div>
             </div>

@@ -12,7 +12,7 @@ from websocket_server import WebSocketServer, PATH_TEMI, PATH_CONTROL
 
 app = FastAPI()
 server = WebSocketServer()
-UPLOAD_DIR = "participant_data"
+UPLOAD_DIR = "participant_data/media"
 
 
 app.mount("/media", StaticFiles(directory=UPLOAD_DIR), name="media")

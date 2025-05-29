@@ -16,6 +16,11 @@ OPENAI_API_KEY="sk-W9...g13Tm1h"
 
 
 ```
+uvicorn main:app --reload --host 0.0.0.0 --port 8000
+```
+
+
+```
 Temi App
  ├── WebSocket -> control server (text commands, state updates)
  └── HTTP GET/POST -> media server (photo/video uploads/display)

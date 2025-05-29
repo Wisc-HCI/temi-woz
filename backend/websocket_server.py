@@ -130,7 +130,9 @@ class WebSocketServer:
             self.last_displayed = None
             await self.send_message(PATH_TEMI, msg_json)
 
-        elif msg_json['command'] in ['skidJoy', 'navigateCamera', 'takePicture']:
+        elif msg_json['command'] in [
+                'skidJoy', 'navigateCamera', 'takePicture',
+                'tiltBy', 'tiltAngle', 'stopMovement', 'turnBy']:
             await self.send_message(PATH_TEMI, msg_json)
 
         elif msg_json['command'] == 'capturePhoto':
@@ -141,11 +143,11 @@ class WebSocketServer:
         elif msg_json['command'] == 'startVideo':
             # TODO: behavior should differ depending on 
             # self.behavior_mode
-            pass
+            await self.send_message(PATH_TEMI, msg_json)
 
         elif msg_json['command'] == 'stopVideo':
             # TODO:
-            pass
+            await self.send_message(PATH_TEMI, msg_json)
 
         elif msg_json['command'] == 'changeMode':
             self.behavior_mode = msg_json['payload']
