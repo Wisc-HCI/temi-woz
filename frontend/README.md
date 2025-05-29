@@ -22,7 +22,8 @@ npm create vite@latest
 ```
 
 
-
+### To run the app
+You may need to install `npm` / `node` first if you haven't done so yet.
 ```
 cd temi-woz-frontend
 
@@ -33,4 +34,3 @@ npm run dev
 ```
 
 
-You may need to install `npm` / `node` first if you haven't done so yet.
