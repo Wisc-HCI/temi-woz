@@ -1,20 +1,25 @@
 ```
 # Python 3.12.8
+# create a virtualenv
 python -m venv env
 
-# (windows)
+# (windows) activate it
 ./env/Scripts/activate
 
+# install required packages
 pip install -r requirements.txt
 ```
 
 
+#### .env file
 ```
+# create a .env file in the `backend` dir, and add these
 FAMILY_INFO_STR=""
 OPENAI_API_KEY="sk-W9...g13Tm1h"
 ```
 
 
+#### To run the backend app
 ```
 uvicorn main:app --reload --host 0.0.0.0 --port 8000
 ```

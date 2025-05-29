@@ -1,4 +1,5 @@
 ```
+# Just for the record of how the templates were created. YOU DO NOT NEED TO RUN THIS.
 npm create vite@latest
 
 
@@ -19,3 +20,17 @@ npm create vite@latest
   npm install
   npm run dev
 ```
+
+
+
+```
+cd temi-woz-frontend
+
+# if first time setup or have new packages to install
+npm install
+# everytime you want to run this
+npm run dev
+```
+
+
+You may need to install `npm` / `node` first if you haven't done so yet.
