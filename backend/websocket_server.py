@@ -31,6 +31,9 @@ photo, video
     - capture
 '''
 
+PASSIVE = 'passive'
+REACTIVE = 'reactive'
+PROACTIVE = 'proactive'
 
 
 class WebSocketServer:
@@ -131,14 +134,16 @@ class WebSocketServer:
             await self.send_message(PATH_TEMI, msg_json)
 
         elif msg_json['command'] in [
-                'skidJoy', 'navigateCamera', 'takePicture',
-                'tiltBy', 'tiltAngle', 'stopMovement', 'turnBy']:
+                'skidJoy', 'takePicture',
+                'tiltBy', 'tiltAngle', 'stopMovement', 'turnBy',
+                'queryLocations', 'goTo']:
             await self.send_message(PATH_TEMI, msg_json)
 
-        elif msg_json['command'] == 'capturePhoto':
-            # TODO: behavior should differ depending on 
-            # self.behavior_mode
-            pass
+        elif msg_json['command'] == 'navigateCamera':
+            if self.behavior_mode == PASSIVE:
+                msg_json['payload'] = 'headless'
+                await self.send_message(PATH_TEMI, msg_json)
+            await self.send_message(PATH_TEMI, msg_json)
 
         elif msg_json['command'] == 'startVideo':
             # TODO: behavior should differ depending on 
@@ -189,6 +194,11 @@ class WebSocketServer:
                     'data': res
                 }
                 await self.send_message(PATH_CONTROL, msg_2)
+        elif msg_json['type'] == 'saved_locations':
+            locations = msg_json.get("data", [])
+            print(f"Received locations: {locations}")
+            await self.send_message(PATH_CONTROL, msg_json)
+
 
     # await websocket.send(message)
 

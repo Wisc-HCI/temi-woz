@@ -8,6 +8,8 @@ function App() {
   const [log, setLog] = useState([]);
   const [inputText, setInputText] = useState("");
   const [pressedButtons, setPressedButtons] = useState([]);
+  const [isRecording, setIsRecording] = useState(false);
+  const [savedLocations, setSavedLocations] = useState([]);
   const [behaviorMode, setBehaviorMode] = useState(null);
   const [uploadNotification, setUploadNotification] = useState(null);
   const [latestUploadedFile, setLatestUploadedFile] = useState(null);
@@ -40,6 +42,9 @@ function App() {
         setUploadNotification(msg);
         setLatestUploadedFile(data.filename); 
         setTimeout(() => setUploadNotification(null), 3000);
+      } else if (data.type === "saved_locations") {
+        const locationList = data.data;
+        setSavedLocations(locationList);
       }
     }
     connectWebSocket(onWsMessage);
@@ -48,6 +53,57 @@ function App() {
   useGamepadControls(sendMessage, setPressedButtons);
 
 
+
+
+
+  function chunkArray(arr, chunkSize) {
+    return Array.from({ length: Math.ceil(arr.length / chunkSize) }, (_, i) =>
+      arr.slice(i * chunkSize, i * chunkSize + chunkSize)
+    );
+  }
+
+  const navButtonsBlock = () => {
+    if (savedLocations.length === 0) {
+      return (
+        <div className="row my-2">
+          <div className="col-sm-6">
+            <button
+              className="btn btn-warning w-100"
+              onClick={() =>
+                sendMessage({ command: "queryLocations", payload: "" })
+              }
+            >
+              Get Locations
+            </button>
+          </div>
+        </div>
+      )
+    }
+
+    const buttonChunks = chunkArray(savedLocations, 3);
+    return (
+      <div>
+        {buttonChunks.map((row, rowIndex) => (
+          <div className="row mb-2" key={rowIndex}>
+            {row.map((loc, colIndex) => (
+              <div className="col-sm-4" key={colIndex}>
+                <button
+                  className="btn btn-primary w-100"
+                  onClick={() =>
+                    sendMessage({ command: "goTo", payload: loc })
+                  }
+                >
+                  {loc}
+                </button>
+              </div>
+            ))}
+          </div>
+        ))}
+      </div>
+    );
+  }
+
+  
   return (
     <div className="container-fluid p-0">
       <nav className="navbar navbar-dark bg-dark fixed-top">
@@ -161,30 +217,10 @@ function App() {
               </div>
             </div>
 
-            <h4 className="mt-2">Commands</h4>
-            <div className="row">
-              <div className="col-sm-6">
-                <button
-                    className="btn btn-primary w-100"
-                    onClick={() => sendMessage({
-                      command: "goTo",
-                      payload: "room 1"
-                    })}>
-                  Go to Room 1
-                </button>
-              </div>
-              <div className="col-sm-6">
-                <button
-                    className="btn btn-primary w-100"
-                    onClick={() => sendMessage({
-                      command: "goTo",
-                      payload: "room 2"
-                    })}>
-                  Go to Room 2
-                </button>
-              </div>
-            </div>
+            <h4 className="mt-2">Go To ...</h4>
+            {navButtonsBlock()}
 
+            <h4 className="mt-2">Movements</h4>
             <div className="row mt-2">
               <div className="col-sm-3">
                 <button
@@ -288,6 +324,7 @@ function App() {
             </div>
 
 
+            <h4 className="mt-2">Screen</h4>
             <div className="row mt-2">
               <div className="col-sm-6">
                 <button
@@ -296,7 +333,7 @@ function App() {
                       command: "navigateCamera",
                       payload: ""
                     })}>
-                  Display Camera
+                  {behaviorMode === 'passive' ? "Activate Camera" : "Display Camera" }
                 </button>
               </div>
               <div className="col-sm-6">
@@ -316,6 +353,7 @@ function App() {
               <div className="col-sm-4">
                 <button
                     className="btn w-100 btn-primary"
+                    disabled={isRecording}
                     onClick={() => sendMessage({
                       command: "takePicture",
                       payload: ""
@@ -326,20 +364,28 @@ function App() {
               <div className="col-sm-4">
                 <button
                     className="btn w-100 btn-primary"
-                    onClick={() => sendMessage({
-                      command: "startVideo",
-                      payload: ""
-                    })}>
+                    disabled={isRecording}
+                    onClick={() => {
+                      sendMessage({
+                        command: "startVideo",
+                        payload: ""
+                      })
+                      setIsRecording(true);
+                    }}>
                   Start Video
                 </button>
               </div>
               <div className="col-sm-4">
                 <button
                     className="btn w-100 btn-primary"
-                    onClick={() => sendMessage({
-                      command: "stopVideo",
-                      payload: ""
-                    })}>
+                    disabled={!isRecording}
+                    onClick={() => {
+                      sendMessage({
+                        command: "stopVideo",
+                        payload: ""
+                      })
+                      setIsRecording(false);
+                    }}>
                   Stop Video
                 </button>
               </div>
