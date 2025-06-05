@@ -134,7 +134,7 @@ class WebSocketServer:
             await self.send_message(PATH_TEMI, msg_json)
 
         elif msg_json['command'] in [
-                'skidJoy', 'takePicture',
+                'skidJoy', 'takePicture', 'refreshScreenShot',
                 'tiltBy', 'tiltAngle', 'stopMovement', 'turnBy',
                 'queryLocations', 'goTo']:
             await self.send_message(PATH_TEMI, msg_json)
@@ -194,143 +194,30 @@ class WebSocketServer:
                     'data': res
                 }
                 await self.send_message(PATH_CONTROL, msg_2)
+        
         elif msg_json['type'] == 'saved_locations':
             locations = msg_json.get("data", [])
             print(f"Received locations: {locations}")
             await self.send_message(PATH_CONTROL, msg_json)
 
-
-    # await websocket.send(message)
-
-
+        elif msg_json['type'] == 'screenshot':
+            await self.send_message(PATH_CONTROL, msg_json)
 
 
 
-# async def control_handler(websocket, message):
-#     # TODO: Check if Temi wants message or msg_json
-#     try:
-#         msg_json = json.loads(message)
-#     except Exception as e:
-#         print(f'[ERROR][control_handler]: {e}')
-#         return
-#     if 'command' not in msg_json:
-#         return
-#     if msg_json['command'] == 'speak':
-#         MESSAGES.append({
-#             'role': 'assistant',
-#             'content': msg_json['payload']
-#         })
-#         save_messages()
-#         await send_message(PATH_TEMI, message)
-
-#     elif msg_json['command'] == 'generate_response':
-#         img_path = None
-#         with_image = msg_json['payload']
-#         if with_image:
-#             # TODO
-#             # capture an image from Temi
-#             # include the path 
-#             # img_path = 
-#             pass
-#         res = generate_response(MESSAGES, img_path)
-#         if res:
-#             msg_2 = {
-#                 'type': 'suggested_response',
-#                 'data': res
-#             }
-#             await send_message(PATH_CONTROL, msg_2)
-
-#     elif msg_json['command'] == 'changeMode':
-#         self.behavior_mode = msg_json['payload']
-#         msg = {
-#             'type': 'self.behavior_mode',
-#             'data': self.behavior_mode
-#         }
-#         await send_message(PATH_CONTROL, msg)
-
-#     elif msg_json['command'] == 'identify':
-#         if msg_json.get('payload') == 'wizard':
-#             msg = {
-#                 'type': 'self.behavior_mode',
-#                 'data': self.behavior_mode
-#             }
-#             await send_message(PATH_CONTROL, msg)
-
-
-
-
-
-
-
-
-
-import time
-async def periodic():
-    group = PATH_CONTROL
-    while True:
-        now = time.time()
-        print(f'periodic: {now}')
-        await send_message(group, f'periodic: {now}')
-        await asyncio.sleep(2)
-
-
-async def periodic_speak():
-    group = PATH_CONTROL
-    while True:
-        now = time.time()
-        print(f'periodic: {now}')
-        data = {
-            "command": "speak",
-            "payload": "Hi Hi."
-        }
-        await send_message(group, data)
-        await asyncio.sleep(30)
-
-
-# async def test_periodic():
-#     # Create a task for the repeating timer
-#     task = asyncio.create_task(periodic())
-#     # Let the timer run for a while
-#     await asyncio.sleep(16)
-#     # Cancel the task to stop the timer
-#     task.cancel()
-
-
-from threading import Thread
-
-
-
+# server = WebSocketServer()
 # async def websocket_main():
-#     async with serve(handler, "", 9090):
-#         await asyncio.get_running_loop().create_future()
+#     async def handler(websocket):
+#         await server.handle_connection(websocket)
 
+#     server_proc = await serve(handler, "", 9090)
+#     print("🚀 WebSocket server running on port 9090")
 
-server = WebSocketServer()
-
-async def websocket_main():
-    async def handler(websocket):
-        await server.handle_connection(websocket)
-
-    server_proc = await serve(handler, "", 9090)
-    print("🚀 WebSocket server running on port 9090")
-
-    # task = asyncio.create_task(periodic_speak())
-
-    try:
-        await asyncio.Future()  # Run forever (until Ctrl+C)
-    except KeyboardInterrupt:
-        print("🛑 KeyboardInterrupt received, shutting down...")
-    finally:
-        # task.cancel()  # cancel background task
-        # try:
-        #     await task
-        # except asyncio.CancelledError:
-        #     print("✅ periodic_speak cancelled")
-
-        server_proc.close()
-        await server_proc.wait_closed()
-        print("✅ Server stopped cleanly")
-
-
-# if __name__ == "__main__":
-#     asyncio.run(websocket_main())
+#     try:
+#         await asyncio.Future()  # Run forever (until Ctrl+C)
+#     except KeyboardInterrupt:
+#         print("🛑 KeyboardInterrupt received, shutting down...")
+#     finally:
+#         server_proc.close()
+#         await server_proc.wait_closed()
+#         print("✅ Server stopped cleanly")

@@ -8,6 +8,7 @@ function App() {
   const [log, setLog] = useState([]);
   const [inputText, setInputText] = useState("");
   const [pressedButtons, setPressedButtons] = useState([]);
+  const [screenshotData, setScreenshotData] = useState(null)
   const [isRecording, setIsRecording] = useState(false);
   const [savedLocations, setSavedLocations] = useState([]);
   const [behaviorMode, setBehaviorMode] = useState(null);
@@ -45,6 +46,10 @@ function App() {
       } else if (data.type === "saved_locations") {
         const locationList = data.data;
         setSavedLocations(locationList);
+      } else if (data.type === "screenshot") {
+        setScreenshotData(
+          `data:image/jpeg;base64,${data.data}`
+        );
       }
     }
     connectWebSocket(onWsMessage);
@@ -123,7 +128,7 @@ function App() {
       <div className="container-fluid main-content">
         <div className="row">
           {/* Control Panel */}
-          <div className="col-md-7">
+          <div className="col-md-5">
             <h4>Message Log</h4>
             <div
               className="border bg-light p-2"
@@ -177,45 +182,76 @@ function App() {
 
           </div>
 
-          <div className="col-md-5">
+          <div className="col-md-7">
 
-            <h4>Behavioral Modes</h4>
-            <div className="alert alert-info mt-2">
-              🤖 Current Behavior Mode: <strong>{behaviorMode || ' --- '}</strong>
+            <div className="row">
+
+              <div className="col-md-7">
+                <h4>Behavioral Modes</h4>
+                <div className="alert alert-info mt-2">
+                  🤖 Current Behavior Mode: <strong>{behaviorMode || ' --- '}</strong>
+                </div>
+
+                <div className="row mt-2">
+                  <div className="col-sm-4">
+                    <button
+                        className="btn w-100 btn-warning"
+                        onClick={() => sendMessage({
+                          command: "changeMode",
+                          payload: "passive"
+                        })}>
+                      Passive
+                    </button>
+                  </div>
+                  <div className="col-sm-4">
+                    <button
+                        className="btn w-100 btn-warning"
+                        onClick={() => sendMessage({
+                          command: "changeMode",
+                          payload: "reactive"
+                        })}>
+                      Reactive
+                    </button>
+                  </div>
+                  <div className="col-sm-4">
+                    <button
+                        className="btn w-100 btn-warning"
+                        onClick={() => sendMessage({
+                          command: "changeMode",
+                          payload: "proactive"
+                        })}>
+                      Proactive
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              <div className="col-md-5">
+                <h4>Screenshot</h4>
+                {screenshotData &&
+                  <div className="mt-3">
+                    <img
+                      src={screenshotData}
+                      alt="Robot Screenshot"
+                      style={{ width: '100%', maxWidth: '500px', border: '1px solid #ccc' }}
+                    />
+                  </div>
+                }
+                <button
+                    className="btn w-100 btn-success"
+                    onClick={() => {
+                      setScreenshotData(null)
+                      sendMessage({
+                        command: "refreshScreenShot",
+                        payload: ""
+                      })
+                    }}>
+                  {screenshotData ? "Refresh" : "Fetch"}
+                </button>
+              </div>
             </div>
 
-            <div className="row mt-2">
-              <div className="col-sm-4">
-                <button
-                    className="btn w-100 btn-warning"
-                    onClick={() => sendMessage({
-                      command: "changeMode",
-                      payload: "passive"
-                    })}>
-                  Passive
-                </button>
-              </div>
-              <div className="col-sm-4">
-                <button
-                    className="btn w-100 btn-warning"
-                    onClick={() => sendMessage({
-                      command: "changeMode",
-                      payload: "reactive"
-                    })}>
-                  Reactive
-                </button>
-              </div>
-              <div className="col-sm-4">
-                <button
-                    className="btn w-100 btn-warning"
-                    onClick={() => sendMessage({
-                      command: "changeMode",
-                      payload: "proactive"
-                    })}>
-                  Proactive
-                </button>
-              </div>
-            </div>
+
 
             <h4 className="mt-2">Go To ...</h4>
             {navButtonsBlock()}
