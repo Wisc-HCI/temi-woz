@@ -8,7 +8,7 @@ from fastapi import (
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import HTMLResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
-from websocket_server import WebSocketServer, PATH_TEMI, PATH_CONTROL
+from websocket_server import WebSocketServer, PATH_TEMI, PATH_CONTROL, PATH_PARTICIPANT
 
 app = FastAPI()
 server = WebSocketServer()
@@ -40,6 +40,12 @@ async def control_ws(websocket: WebSocket):
     print(PATH_CONTROL)
     await websocket.accept()
     await server.handle_connection(websocket, PATH_CONTROL)
+
+@app.websocket(PATH_PARTICIPANT)
+async def participant_ws(websocket: WebSocket):
+    print(PATH_PARTICIPANT)
+    await websocket.accept()
+    await server.handle_connection(websocket, PATH_PARTICIPANT)
 
 
 @app.get("/status")

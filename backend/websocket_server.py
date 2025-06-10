@@ -8,6 +8,7 @@ from llm_model import generate_response
 
 PATH_TEMI = '/temi'
 PATH_CONTROL = '/control'
+PATH_PARTICIPANT = '/participant'
 LOG_FILE = 'participant_data/log.log'
 MESSAGES_FILE = 'participant_data/messages.json'
 
@@ -40,7 +41,8 @@ class WebSocketServer:
     def __init__(self):
         self.connections = {
             PATH_TEMI: set(),
-            PATH_CONTROL: set()
+            PATH_CONTROL: set(),
+            PATH_PARTICIPANT: set()
         }
         self.behavior_mode = None
         self.last_displayed = None
@@ -71,6 +73,8 @@ class WebSocketServer:
                     await self.temi_handler(websocket, message)
                 elif ws_path == PATH_CONTROL:
                     await self.control_handler(websocket, message)
+                elif ws_path == PATH_PARTICIPANT:
+                    await self.participant_handler(websocket, message)
                 else:
                     # No handler for this path; close the connection.
                     return
@@ -203,6 +207,18 @@ class WebSocketServer:
         elif msg_json['type'] == 'screenshot':
             await self.send_message(PATH_CONTROL, msg_json)
 
+    async def participant_handler(self, websocket, message):
+        try:
+            msg_json = json.loads(message)
+        except Exception as e:
+            print(f'[ERROR][control_handler]: {e}')
+            return
+        if 'command' not in msg_json:
+            return
+        if msg_json['command'] in [
+                'skidJoy', 'tiltBy', 'tiltAngle',
+                'stopMovement', 'turnBy']:
+            await self.send_message(PATH_TEMI, msg_json)
 
 
 # server = WebSocketServer()

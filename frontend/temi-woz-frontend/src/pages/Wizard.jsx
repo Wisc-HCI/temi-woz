@@ -53,7 +53,7 @@ const WizardPage = () => {
         );
       }
     }
-    connectWebSocket(onWsMessage);
+    connectWebSocket(onWsMessage, "control");
   }, []);
 
   useGamepadControls(sendMessage, setPressedButtons);

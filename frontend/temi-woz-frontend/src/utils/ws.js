@@ -1,7 +1,7 @@
 let socket;
 
-export function connectWebSocket(onMessage) {
-  socket = new WebSocket("ws://localhost:8000/control");
+export function connectWebSocket(onMessage, path) {
+  socket = new WebSocket(`ws://localhost:8000/${path}`);
 
   socket.onopen = () => {
     console.log("WebSocket connected");

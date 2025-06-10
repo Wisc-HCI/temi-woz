@@ -7,23 +7,58 @@ import { connectWebSocket, sendMessageWS } from "../utils/ws";
 import { useGamepadControls } from "../utils/useGamepadControls";
 
 
+
+
 const ParticipantPage = () => {
 
   const [showZoomUI, setShowZoomUI] = useState(false);
   const [pressedButtons, setPressedButtons] = useState([]);
 
-  var config = {
-    videoSDKJWT: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJhcHBfa2V5IjoiT1lkZk5aUDhaOUNDV1AzakxoWml5cGtINXdNTnE0MVVRYnFlIiwicm9sZV90eXBlIjoxLCJ0cGMiOiJmYW1pbHktY29ubmVjdGlvbiIsImlhdCI6MTc0OTUzMjY0MSwiZXhwIjoxNzQ5NTM2MjQxfQ.a9iEtKZNBwlNaNlwqpZCF9FaTEpAWZmqAUJTl6OHx9s",
-    sessionName: "family-connection",
-    userName: "Parent",
-    featuresOptions: [
-      "video", "audio", "leave", "footer", "header"
-    ]
+
+  const sendMessage = (message) => {
+    sendMessageWS(message);
   };
 
+  useEffect(() => {
+    const onWsMessage = (data) => {
+      console.log('onWsMessage')
+      console.log(data)
+      if (data.type === "media_uploaded") {
+        const msg = `✅ Media uploaded: ${data.filename}`;
+        // setUploadNotification(msg);
+        // setLatestUploadedFile(data.filename); 
+        // setTimeout(() => setUploadNotification(null), 3000);
+      }
+    }
+    connectWebSocket(onWsMessage, "participant");
+  }, []);
+
+  useGamepadControls(sendMessage, setPressedButtons);
+
+  // console.log(import.meta.env.VITE_ZOOM_JWT)
+
+  var config = {
+    videoSDKJWT: import.meta.env.VITE_ZOOM_JWT,
+    sessionName: "research-study",
+    userName: "Parent",
+    featuresOptions: {
+      'feedback': {
+        enable: false
+      }
+    }
+  };
+
+
   const startVideoCall = () => {
+    setShowZoomUI(true)
     const sessionContainer = document.getElementById('sessionContainer');
     uitoolkit.joinSession(sessionContainer, config);
+    const sessionDestroyed = () => {
+      console.log("sessionDestroyed")
+      uitoolkit.destroy();
+      setShowZoomUI(false)
+    }
+    uitoolkit.onSessionDestroyed(sessionDestroyed);
   }
 
   return (
@@ -37,7 +72,7 @@ const ParticipantPage = () => {
 
 
           {/* Video Panel */}
-          <div className="col-md-5">
+          <div className="col-md-12">
             <h4>Video Panel</h4>
             <button
                 onClick={() => {
@@ -46,11 +81,18 @@ const ParticipantPage = () => {
                 className="btn btn-primary">
               Start Video Call
             </button>
-            <div id="sessionContainer" style={{ height: '70vh' }} />
+            <div
+              id="sessionContainer"
+              style={{
+                height: '70vh',
+                display: showZoomUI ? 'block' : 'none'
+              }}
+            ></div>
           </div>
+        </div>
 
-
-          <div className="col-md-7">
+        <div className="row">
+          <div className="col-md-12">
 
             <h4 className="mt-2">Movements</h4>
             <div className="row mt-2">
@@ -155,12 +197,10 @@ const ParticipantPage = () => {
               </div>
             </div>  
           </div>
-
-
         </div>
+
+
       </div>
-
-
     </div>
   );
 };
