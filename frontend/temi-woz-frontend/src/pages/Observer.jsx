@@ -9,7 +9,7 @@ import { useGamepadControls } from "../utils/useGamepadControls";
 
 
 
-const ParticipantPage = () => {
+const ObserverPage = () => {
 
   const [showZoomUI, setShowZoomUI] = useState(false);
   const [videoCallStatus, setVideoCallStatus] = useState(null);
@@ -50,6 +50,9 @@ const ParticipantPage = () => {
         enable: false
       },
       'leave': {
+        enable: true
+      },
+      'video': {
         enable: false
       }
 
@@ -72,7 +75,7 @@ const ParticipantPage = () => {
   return (
     <div className="container-fluid p-0">
       <nav className="navbar navbar-dark bg-dark fixed-top">
-        <span className="navbar-brand mb-0 h1">🤖 Participant Dashboard</span>
+        <span className="navbar-brand mb-0 h1">🤖 Observer Dashboard</span>
       </nav>
 
       <div className="container-fluid main-content mt-5 pt-2">
@@ -262,4 +265,4 @@ const ParticipantPage = () => {
   );
 };
 
-export default ParticipantPage;
+export default ObserverPage;

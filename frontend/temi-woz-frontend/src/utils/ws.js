@@ -5,7 +5,7 @@ export function connectWebSocket(onMessage, path) {
 
   socket.onopen = () => {
     console.log("WebSocket connected");
-    socket.send(JSON.stringify({ command: "identify", payload: "wizard" }));
+    socket.send(JSON.stringify({ command: "identify", payload: "webpage" }));
   };
 
   socket.onmessage = (event) => {

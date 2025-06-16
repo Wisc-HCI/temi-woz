@@ -12,6 +12,9 @@ const Dashboard = () => {
         <Link to="/participant" className="btn btn-primary">
           Go to Participant Page
         </Link>
+        <Link to="/observer" className="btn btn-primary">
+          Go to Observer Page
+        </Link>
       </div>
     </div>
   )

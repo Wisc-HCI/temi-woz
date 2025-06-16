@@ -1,5 +1,6 @@
 import asyncio
 import json
+import time
 from websockets.asyncio.server import serve
 from fastapi import WebSocketDisconnect
 import signal
@@ -43,6 +44,11 @@ class WebSocketServer:
             PATH_TEMI: set(),
             PATH_CONTROL: set(),
             PATH_PARTICIPANT: set()
+        }
+        self.video_call_status = {
+            'robot': None,
+            'laptop': None,
+            'call_started': None,
         }
         self.behavior_mode = None
         self.last_displayed = None
@@ -167,7 +173,7 @@ class WebSocketServer:
             await self.send_message(PATH_CONTROL, msg)
 
         elif msg_json['command'] == 'identify':
-            if msg_json.get('payload') == 'wizard':
+            if msg_json.get('payload') == 'webpage':
                 msg = {
                     'type': 'initial_status',
                     'data': {
@@ -207,6 +213,14 @@ class WebSocketServer:
         elif msg_json['type'] == 'screenshot':
             await self.send_message(PATH_CONTROL, msg_json)
 
+        elif msg_json['type'] == 'video_call':
+            action = msg_json.get("data")
+            if action == 'start':
+                self.video_call_status['robot'] = 'calling'
+                self.video_call_status['laptop'] = 'ringing'
+                await self.send_message(PATH_PARTICIPANT, msg_json)
+                await self.send_message(PATH_CONTROL, msg_json)
+
     async def participant_handler(self, websocket, message):
         try:
             msg_json = json.loads(message)
@@ -218,6 +232,16 @@ class WebSocketServer:
         if msg_json['command'] in [
                 'skidJoy', 'tiltBy', 'tiltAngle',
                 'stopMovement', 'turnBy']:
+            await self.send_message(PATH_TEMI, msg_json)
+
+        if msg_json['command'] == 'video_call':
+            if msg_json['payload'] == 'answer':
+                self.video_call_status['robot'] = 'connected'
+                self.video_call_status['laptop'] = 'connected'
+                self.video_call_status['call_started'] = time.time()
+            elif msg_json['payload'] == 'dismiss':
+                self.video_call_status['robot'] = None
+                self.video_call_status['laptop'] = None
             await self.send_message(PATH_TEMI, msg_json)
 
 
