@@ -146,7 +146,7 @@ class WebSocketServer:
         elif msg_json['command'] in [
                 'skidJoy', 'takePicture', 'refreshScreenShot',
                 'tiltBy', 'tiltAngle', 'stopMovement', 'turnBy',
-                'queryLocations', 'goTo']:
+                'queryLocations', 'goTo', 'displayMode']:
             await self.send_message(PATH_TEMI, msg_json)
 
         elif msg_json['command'] == 'navigateCamera':
@@ -218,6 +218,11 @@ class WebSocketServer:
             if action == 'start':
                 self.video_call_status['robot'] = 'calling'
                 self.video_call_status['laptop'] = 'ringing'
+                await self.send_message(PATH_PARTICIPANT, msg_json)
+                await self.send_message(PATH_CONTROL, msg_json)
+            elif action == 'end':
+                self.video_call_status['robot'] = None
+                self.video_call_status['laptop'] = None
                 await self.send_message(PATH_PARTICIPANT, msg_json)
                 await self.send_message(PATH_CONTROL, msg_json)
 

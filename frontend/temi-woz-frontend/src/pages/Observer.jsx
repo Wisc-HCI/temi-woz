@@ -2,6 +2,7 @@
 import React, { useEffect, useState } from 'react'
 import uitoolkit from "@zoom/videosdk-ui-toolkit";
 import "@zoom/videosdk-ui-toolkit/dist/videosdk-ui-toolkit.css";
+import ZoomVideo from '@zoom/videosdk'
 
 import { connectWebSocket, sendMessageWS } from "../utils/ws";
 import { useGamepadControls } from "../utils/useGamepadControls";
@@ -14,6 +15,13 @@ const ObserverPage = () => {
   const [showZoomUI, setShowZoomUI] = useState(false);
   const [videoCallStatus, setVideoCallStatus] = useState(null);
   const [pressedButtons, setPressedButtons] = useState([]);
+  const [zoomStream, setZoomStream] = useState(null);
+
+  var client = ZoomVideo.createClient()
+
+  useEffect(() => {
+    console.log(zoomStream)
+  }, [zoomStream]);
 
 
   const sendMessage = (message) => {
@@ -44,7 +52,7 @@ const ObserverPage = () => {
   var config = {
     videoSDKJWT: import.meta.env.VITE_ZOOM_JWT,
     sessionName: "research-study",
-    userName: "Laptop",
+    userName: "Researcher",
     featuresOptions: {
       'feedback': {
         enable: false
@@ -54,7 +62,19 @@ const ObserverPage = () => {
       },
       'video': {
         enable: false
-      }
+      },
+      'audio': {
+        enable: false
+      },
+      'chat': {
+        enable: false,
+      },
+      'share': {
+        enable: false,
+      },
+      'subsession': {
+        enable: false,
+      },
 
     }
   };
@@ -150,112 +170,103 @@ const ObserverPage = () => {
               </div>
             </div>
 
-            <div className="row">
-              <div className="col-md-12">
+          </div>
 
-                <h4 className="mt-2">Movements</h4>
-                <div className="row mt-2">
-                  <div className="col-sm-3">
-                    <button
-                        className={
-                          `btn w-100 ${pressedButtons.includes(14) ?
-                            "btn-success" :
-                            "btn-primary"}`
-                        }
-                        onClick={() => sendMessage({
-                          command: "turnBy",
-                          payload: "10"
-                        })}>
-                      Left
-                    </button>
-                  </div>
-                  <div className="col-sm-3">
-                    <button
-                        className={
-                          `btn w-100 ${pressedButtons.includes(15) ?
-                            "btn-success" :
-                            "btn-primary"}`
-                        }
-                        onClick={() => sendMessage({
-                          command: "turnBy",
-                          payload: "-10"
-                        })}>
-                      Right
-                    </button>
-                  </div>
-                  <div className="col-sm-3">
-                    <button
-                        className={
-                          `btn w-100 ${pressedButtons.includes(12) ?
-                            "btn-success" :
-                            "btn-primary"}`
-                        }
-                        onClick={() => sendMessage({
-                          command: "skidJoy",
-                          payload: "(0.5, 0)"
-                        })}>
-                      Forward
-                    </button>
-                  </div>
-                  <div className="col-sm-3">
-                    <button
-                        className={
-                          `btn w-100 ${pressedButtons.includes(13) ?
-                            "btn-success" :
-                            "btn-primary"}`
-                        }
-                        onClick={() => sendMessage({
-                          command: "skidJoy",
-                          payload: "(-0.5, 0)"
-                        })}>
-                      Back
-                    </button>
-                  </div>
+          <div className="row">
+            <div className="col-md-12">
+
+              <h4 className="mt-2">Controls</h4>
+              <div className="row mt-2">
+                <div className="col-sm-3">
+                  <button
+                      className="btn w-100 btn-primary"
+                      onClick={() => {
+                        setZoomStream(client.getMediaStream());
+                      }}>
+                    Get Stream
+                  </button>
                 </div>
-
-                <div className="row mt-2">
-                  <div className="col-sm-3">
-                    <button
-                        className="btn w-100 btn-primary"
-                        onClick={() => sendMessage({
-                          command: "tiltBy",
-                          payload: "5"
-                        })}>
-                      Up
-                    </button>
-                  </div>
-                  <div className="col-sm-3">
-                    <button
-                        className="btn w-100 btn-primary"
-                        onClick={() => sendMessage({
-                          command: "tiltBy",
-                          payload: "-5"
-                        })}>
-                      Down
-                    </button>
-                  </div>
-                  <div className="col-sm-3">
-                    <button
-                        className="btn w-100 btn-primary"
-                        onClick={() => sendMessage({
-                          command: "tiltAngle",
-                          payload: "0"
-                        })}>
-                      👀 ahead
-                    </button>
-                  </div>
-                  <div className="col-sm-3">
-                    <button
-                        className="btn w-100 btn-danger"
-                        onClick={() => sendMessage({
-                          command: "stopMovement",
-                          payload: ""
-                        })}>
-                      STOP
-                    </button>
-                  </div>
-                </div>  
+                <div className="col-sm-3">
+                  <button
+                      className="btn w-100 btn-primary"
+                      onClick={() => {
+                        zoomStream.muteAudio()
+                      }}>
+                    Mute Audio
+                  </button>
+                </div>
+                <div className="col-sm-3">
+                  <button
+                      className={
+                        `btn w-100 ${pressedButtons.includes(12) ?
+                          "btn-success" :
+                          "btn-primary"}`
+                      }
+                      onClick={() => sendMessage({
+                        command: "skidJoy",
+                        payload: "(0.5, 0)"
+                      })}>
+                    Forward
+                  </button>
+                </div>
+                <div className="col-sm-3">
+                  <button
+                      className={
+                        `btn w-100 ${pressedButtons.includes(13) ?
+                          "btn-success" :
+                          "btn-primary"}`
+                      }
+                      onClick={() => sendMessage({
+                        command: "skidJoy",
+                        payload: "(-0.5, 0)"
+                      })}>
+                    Back
+                  </button>
+                </div>
               </div>
+
+              <div className="row mt-2">
+                <div className="col-sm-3">
+                  <button
+                      className="btn w-100 btn-primary"
+                      onClick={() => sendMessage({
+                        command: "tiltBy",
+                        payload: "5"
+                      })}>
+                    Up
+                  </button>
+                </div>
+                <div className="col-sm-3">
+                  <button
+                      className="btn w-100 btn-primary"
+                      onClick={() => sendMessage({
+                        command: "tiltBy",
+                        payload: "-5"
+                      })}>
+                    Down
+                  </button>
+                </div>
+                <div className="col-sm-3">
+                  <button
+                      className="btn w-100 btn-primary"
+                      onClick={() => sendMessage({
+                        command: "tiltAngle",
+                        payload: "0"
+                      })}>
+                    👀 ahead
+                  </button>
+                </div>
+                <div className="col-sm-3">
+                  <button
+                      className="btn w-100 btn-danger"
+                      onClick={() => sendMessage({
+                        command: "stopMovement",
+                        payload: ""
+                      })}>
+                    STOP
+                  </button>
+                </div>
+              </div>  
             </div>
           </div>
 

@@ -30,8 +30,13 @@ const ParticipantPage = () => {
         // setLatestUploadedFile(data.filename); 
         // setTimeout(() => setUploadNotification(null), 3000);
       } else if (data.type === "video_call") {
-        if (data.data === 'start')
-        setVideoCallStatus('ringing');
+        if (data.data === 'start') {
+          setVideoCallStatus('ringing');
+        } else if (data.data === 'end') {
+          setVideoCallStatus(null);
+          setShowZoomUI(false);
+        }
+        
       }
     }
     connectWebSocket(onWsMessage, "participant");
@@ -51,7 +56,19 @@ const ParticipantPage = () => {
       },
       'leave': {
         enable: false
-      }
+      },
+      'users': {
+        enable: false
+      },
+      'chat': {
+        enable: false,
+      },
+      'share': {
+        enable: false,
+      },
+      'subsession': {
+        enable: false,
+      },
 
     }
   };

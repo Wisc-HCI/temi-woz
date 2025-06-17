@@ -428,6 +428,29 @@ const WizardPage = () => {
               </div>
             </div>
 
+            <div className="row mt-2">
+              <div className="col-sm-4">
+                <button
+                    className="btn w-100 btn-primary"
+                    onClick={() => sendMessage({
+                      command: "displayMode",
+                      payload: "admin"
+                    })}>
+                  Show Buttons
+                </button>
+              </div>
+              <div className="col-sm-4">
+                <button
+                    className="btn w-100 btn-primary"
+                    onClick={() => sendMessage({
+                      command: "displayMode",
+                      payload: "in-study"
+                    })}>
+                  Hide Buttons
+                </button>
+              </div>
+            </div>
+
             
 
 
