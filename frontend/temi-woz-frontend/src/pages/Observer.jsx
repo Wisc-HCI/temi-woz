@@ -5,8 +5,7 @@ import "@zoom/videosdk-ui-toolkit/dist/videosdk-ui-toolkit.css";
 import ZoomVideo from '@zoom/videosdk'
 
 import { connectWebSocket, sendMessageWS } from "../utils/ws";
-import { useGamepadControls } from "../utils/useGamepadControls";
-
+import { fetchZoomToken } from "../utils/utils"; 
 
 
 
@@ -14,7 +13,6 @@ const ObserverPage = () => {
 
   const [showZoomUI, setShowZoomUI] = useState(false);
   const [videoCallStatus, setVideoCallStatus] = useState(null);
-  const [pressedButtons, setPressedButtons] = useState([]);
   const [zoomStream, setZoomStream] = useState(null);
 
   var client = ZoomVideo.createClient()
@@ -42,10 +40,10 @@ const ObserverPage = () => {
         setVideoCallStatus('ringing');
       }
     }
-    connectWebSocket(onWsMessage, "participant");
+    // share the path of the main control page
+    connectWebSocket(onWsMessage, "control");
   }, []);
 
-  useGamepadControls(sendMessage, setPressedButtons);
 
   // console.log(import.meta.env.VITE_ZOOM_JWT)
 
@@ -80,9 +78,15 @@ const ObserverPage = () => {
   };
 
 
-  const startVideoCall = () => {
+  const startVideoCall = async () => {
     setShowZoomUI(true)
     const sessionContainer = document.getElementById('sessionContainer');
+    var token = await fetchZoomToken(import.meta.env.VITE_SERVER_IP);
+    if (token === null) {
+      token = import.meta.env.VITE_ZOOM_JWT
+    }
+    config['videoSDKJWT'] = token
+
     uitoolkit.joinSession(sessionContainer, config);
     const sessionDestroyed = () => {
       console.log("sessionDestroyed")
@@ -197,31 +201,16 @@ const ObserverPage = () => {
                 </div>
                 <div className="col-sm-3">
                   <button
-                      className={
-                        `btn w-100 ${pressedButtons.includes(12) ?
-                          "btn-success" :
-                          "btn-primary"}`
-                      }
+                      className="btn w-100 btn-primary"
                       onClick={() => sendMessage({
-                        command: "skidJoy",
-                        payload: "(0.5, 0)"
+                        command: "video_call",
+                        payload: "proactive_call"
                       })}>
-                    Forward
+                    Call All
                   </button>
                 </div>
                 <div className="col-sm-3">
-                  <button
-                      className={
-                        `btn w-100 ${pressedButtons.includes(13) ?
-                          "btn-success" :
-                          "btn-primary"}`
-                      }
-                      onClick={() => sendMessage({
-                        command: "skidJoy",
-                        payload: "(-0.5, 0)"
-                      })}>
-                    Back
-                  </button>
+                  
                 </div>
               </div>
 

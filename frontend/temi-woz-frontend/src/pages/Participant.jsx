@@ -5,7 +5,7 @@ import "@zoom/videosdk-ui-toolkit/dist/videosdk-ui-toolkit.css";
 
 import { connectWebSocket, sendMessageWS } from "../utils/ws";
 import { useGamepadControls } from "../utils/useGamepadControls";
-
+import { fetchZoomToken } from "../utils/utils"; 
 
 
 
@@ -14,6 +14,9 @@ const ParticipantPage = () => {
   const [showZoomUI, setShowZoomUI] = useState(false);
   const [videoCallStatus, setVideoCallStatus] = useState(null);
   const [pressedButtons, setPressedButtons] = useState([]);
+  const [notification, setNotification] = useState(null);
+  const [showAdminButtons, setShowAdminButtons] = useState(true);
+  const [behaviorMode, setBehaviorMode] = useState(null);
 
 
   const sendMessage = (message) => {
@@ -29,14 +32,37 @@ const ParticipantPage = () => {
         // setUploadNotification(msg);
         // setLatestUploadedFile(data.filename); 
         // setTimeout(() => setUploadNotification(null), 3000);
+      } else if (data.type === "initial_status") {
+        setBehaviorMode(data.data.behavior_mode);
+      } else if (data.type === "behavior_mode") {
+        setBehaviorMode(data.data);
       } else if (data.type === "video_call") {
         if (data.data === 'start') {
           setVideoCallStatus('ringing');
         } else if (data.data === 'end') {
           setVideoCallStatus(null);
           setShowZoomUI(false);
+        } else if (data.data === 'answer') {
+          setVideoCallStatus('connected');
+          setTimeout(() => setShowZoomUI(true), 1000);
+        } else if (data.data === 'dismiss') {
+          setVideoCallStatus(null);
+          setNotification("Call was dismissed or timed out. Please try again later.")
+          setTimeout(() => setNotification(null), 5000);
+        } else if ( data.data === 'proactive_call') {
+          setVideoCallStatus('ringing');
+          // todo: play ring sound
+          // todo: play audio about robot calling
+        } else if ( data.data === 'connected') {
+          setVideoCallStatus('connected');
+          setTimeout(() => setShowZoomUI(true), 1000);
         }
-        
+      } else if (data.command === "displayMode") {
+        if (data.payload === 'admin') {
+          setShowAdminButtons(true);
+        } else {
+          setShowAdminButtons(false);
+        }
       }
     }
     connectWebSocket(onWsMessage, "participant");
@@ -47,7 +73,7 @@ const ParticipantPage = () => {
   // console.log(import.meta.env.VITE_ZOOM_JWT)
 
   var config = {
-    videoSDKJWT: import.meta.env.VITE_ZOOM_JWT,
+    videoSDKJWT: null,
     sessionName: "research-study",
     userName: "Laptop",
     featuresOptions: {
@@ -74,9 +100,15 @@ const ParticipantPage = () => {
   };
 
 
-  const startVideoCall = () => {
+  const startVideoCall = async () => {
     setShowZoomUI(true)
     const sessionContainer = document.getElementById('sessionContainer');
+    var token = await fetchZoomToken(import.meta.env.VITE_SERVER_IP);
+    if (token === null) {
+      token = import.meta.env.VITE_ZOOM_JWT
+    }
+    config['videoSDKJWT'] = token
+
     uitoolkit.joinSession(sessionContainer, config);
     const sessionDestroyed = () => {
       console.log("sessionDestroyed")
@@ -86,15 +118,42 @@ const ParticipantPage = () => {
     uitoolkit.onSessionDestroyed(sessionDestroyed);
   }
 
+  const answerBtnOnClick = () => {
+    if (behaviorMode === 'proactive') {
+      setVideoCallStatus('waiting');
+      sendMessage({
+        command: "video_call",
+        payload: "answer"
+      })
+    } else {
+      setVideoCallStatus('connected');
+      sendMessage({
+        command: "video_call",
+        payload: "answer"
+      })
+      setTimeout(() => setShowZoomUI(true), 2000);
+    }
+  }
+
   return (
     <div className="container-fluid p-0">
       <nav className="navbar navbar-dark bg-dark fixed-top">
-        <span className="navbar-brand mb-0 h1">🤖 Participant Dashboard</span>
+        <span className="navbar-brand mb-0 h1">🤖 Participant Dashboard {showAdminButtons && `(${behaviorMode})`}</span>
       </nav>
+
+      {notification && (
+        <div
+          className="alert alert-warning position-fixed bottom-0 start-50 translate-middle-x mb-3 shadow"
+          role="alert"
+          style={{ zIndex: 1050 }}
+        >
+          {notification}
+        </div>
+      )}
 
       <div className="container-fluid main-content mt-5 pt-2">
 
-        {!showZoomUI &&
+        {showAdminButtons &&
           <button
               onClick={() => {
                 startVideoCall()
@@ -114,14 +173,7 @@ const ParticipantPage = () => {
             <div className="row">
               <div className="col-md-6">
                 <button
-                  onClick={() => {
-                    setVideoCallStatus('connected');
-                    sendMessage({
-                      command: "video_call",
-                      payload: "answer"
-                    })
-                    setTimeout(() => setShowZoomUI(true), 2000);
-                  }}
+                  onClick={() => {answerBtnOnClick()}}
                   className="btn btn-primary">
                   Answer Call
                 </button>
@@ -135,6 +187,50 @@ const ParticipantPage = () => {
                   Dismiss
                 </button>
               </div>
+            </div>
+          </>
+        }
+
+        {videoCallStatus === 'waiting' &&
+          <div className="row">
+            <div className="col-md-10 offset-md-1 alert alert-warning">
+              <h1>Waiting for other user to answer the call ...</h1>
+            </div>
+          </div>
+        }
+
+        {(videoCallStatus === null || videoCallStatus === 'calling') &&
+          <>
+            {/*<div className="row">
+              <div className="col-md-10 offset-md-1">
+                <h1>Incomging call!</h1>
+              </div>
+            </div>*/}
+            <div className="row mt-3">
+              <div className="col-md-6">
+                <button
+                  disabled={videoCallStatus === "calling"}
+                  onClick={() => {
+                    setVideoCallStatus('calling');
+                    sendMessage({
+                      command: "video_call",
+                      payload: "start"
+                    })
+                    // setTimeout(() => setShowZoomUI(true), 2000);
+                  }}
+                  className="btn btn-primary">
+                  {videoCallStatus === null ? "Call Robot" : "Calling ..."}
+                </button>
+              </div>
+              {/*<div className="col-md-6">
+                <button
+                  onClick={() => {
+                    setShowZoomUI(true);
+                  }}
+                  className="btn btn-primary">
+                  Dismiss
+                </button>
+              </div>*/}
             </div>
           </>
         }
@@ -154,15 +250,40 @@ const ParticipantPage = () => {
                     height: '70vh',
                   }}
                 ></div>
-                  <button
-                    onClick={() => {
-                      setShowZoomUI(false);
-                    }}
-                    className="btn btn-primary">
-                  Hide
-                </button>
+                  {showAdminButtons &&
+                    <button
+                      onClick={() => {
+                        setShowZoomUI(false);
+                      }}
+                      className="btn btn-primary">
+                    Hide
+                  </button>
+                }
               </div>
             </div>
+
+
+            {videoCallStatus === "connected" &&
+              <div className="row mt-3">
+                <div className="col-md-6">
+                  <button
+                    onClick={() => {
+                      sendMessage({
+                        command: "video_call",
+                        payload: "end"
+                      })
+                      setTimeout(() => {
+                        setShowZoomUI(false);
+                        setVideoCallStatus(null);
+                      }, 500);
+                    }}
+                    className="btn btn-primary">
+                    End Call
+                  </button>
+                </div>
+              </div>
+            }
+
 
             <div className="row">
               <div className="col-md-12">

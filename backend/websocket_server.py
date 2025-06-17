@@ -33,7 +33,6 @@ photo, video
     - capture
 '''
 
-PASSIVE = 'passive'
 REACTIVE = 'reactive'
 PROACTIVE = 'proactive'
 
@@ -45,11 +44,9 @@ class WebSocketServer:
             PATH_CONTROL: set(),
             PATH_PARTICIPANT: set()
         }
-        self.video_call_status = {
-            'robot': None,
-            'laptop': None,
-            'call_started': None,
-        }
+        self.zoom_status_call_start = 0
+        self.zoom_status_robot = None
+        self.zoom_status_participant = None
         self.behavior_mode = None
         self.last_displayed = None
         self.messages = self._load_messages()
@@ -143,10 +140,14 @@ class WebSocketServer:
             self.last_displayed = None
             await self.send_message(PATH_TEMI, msg_json)
 
+        elif msg_json['command'] == 'displayMode':
+            await self.send_message(PATH_TEMI, msg_json)
+            await self.send_message(PATH_PARTICIPANT, msg_json)
+
         elif msg_json['command'] in [
                 'skidJoy', 'takePicture', 'refreshScreenShot',
                 'tiltBy', 'tiltAngle', 'stopMovement', 'turnBy',
-                'queryLocations', 'goTo', 'displayMode']:
+                'queryLocations', 'goTo']:
             await self.send_message(PATH_TEMI, msg_json)
 
         elif msg_json['command'] == 'navigateCamera':
@@ -171,6 +172,19 @@ class WebSocketServer:
                 'data': self.behavior_mode
             }
             await self.send_message(PATH_CONTROL, msg)
+            await self.send_message(PATH_PARTICIPANT, msg)
+
+        elif msg_json['command'] == 'video_call':
+            action = msg_json['payload']
+            if action == 'proactive_call':
+                self.zoom_status_robot = 'ringing'
+                self.zoom_status_participant = 'ringing'
+                participant_msg = {
+                    'type': 'video_call',
+                    'data': action
+                }
+                await self.send_message(PATH_TEMI, msg_json)
+                await self.send_message(PATH_PARTICIPANT, participant_msg)
 
         elif msg_json['command'] == 'identify':
             if msg_json.get('payload') == 'webpage':
@@ -216,15 +230,43 @@ class WebSocketServer:
         elif msg_json['type'] == 'video_call':
             action = msg_json.get("data")
             if action == 'start':
-                self.video_call_status['robot'] = 'calling'
-                self.video_call_status['laptop'] = 'ringing'
-                await self.send_message(PATH_PARTICIPANT, msg_json)
-                await self.send_message(PATH_CONTROL, msg_json)
+                self.zoom_status_robot = 'calling'
+                self.zoom_status_participant = 'ringing'
             elif action == 'end':
-                self.video_call_status['robot'] = None
-                self.video_call_status['laptop'] = None
-                await self.send_message(PATH_PARTICIPANT, msg_json)
-                await self.send_message(PATH_CONTROL, msg_json)
+                self.zoom_status_robot = None
+                self.zoom_status_participant = None
+                call_duration = time.time() - self.zoom_status_call_start
+                print(f'Call ended. Lasted {call_duration} seconds.')
+            elif action == 'answer':
+                if self.behavior_mode == PROACTIVE:
+                    if self.zoom_status_participant == 'ringing':
+                        self.zoom_status_robot == 'waiting'
+                        return
+                    elif self.zoom_status_participant == 'waiting':
+                        self.zoom_status_robot == 'connected'
+                        self.zoom_status_participant == 'connected'
+                        robot_msg = {
+                            'command': 'video_call',
+                            'payload': 'connected'
+                        }
+                        laptop_msg = {
+                            'type': 'video_call',
+                            'data': 'connected'
+                        }
+                        self.zoom_status_call_start = time.time()
+                        await self.send_message(PATH_PARTICIPANT, laptop_msg)
+                        await self.send_message(PATH_CONTROL, laptop_msg)
+                        await self.send_message(PATH_TEMI, robot_msg)
+                        return
+
+                self.zoom_status_robot = 'connected'
+                self.zoom_status_participant = 'connected'
+                self.zoom_status_call_start = time.time()
+            elif action == 'dismiss':
+                self.zoom_status_robot = None
+                self.zoom_status_participant = None
+            await self.send_message(PATH_PARTICIPANT, msg_json)
+            await self.send_message(PATH_CONTROL, msg_json)
 
     async def participant_handler(self, websocket, message):
         try:
@@ -241,13 +283,43 @@ class WebSocketServer:
 
         if msg_json['command'] == 'video_call':
             if msg_json['payload'] == 'answer':
-                self.video_call_status['robot'] = 'connected'
-                self.video_call_status['laptop'] = 'connected'
-                self.video_call_status['call_started'] = time.time()
+                if self.behavior_mode == PROACTIVE:
+                    if self.zoom_status_robot == 'ringing':
+                        self.zoom_status_participant == 'waiting'
+                        return
+                    elif self.zoom_status_robot == 'waiting':
+                        self.zoom_status_robot == 'connected'
+                        self.zoom_status_participant == 'connected'
+                        robot_msg = {
+                            'command': 'video_call',
+                            'payload': 'connected'
+                        }
+                        laptop_msg = {
+                            'type': 'video_call',
+                            'data': 'connected'
+                        }
+                        self.zoom_status_call_start = time.time()
+                        await self.send_message(PATH_PARTICIPANT, laptop_msg)
+                        await self.send_message(PATH_CONTROL, laptop_msg)
+                        await self.send_message(PATH_TEMI, robot_msg)
+                        return
+                else:
+                    self.zoom_status_robot = 'connected'
+                    self.zoom_status_participant = 'connected'
+                    self.zoom_status_call_start = time.time()
             elif msg_json['payload'] == 'dismiss':
-                self.video_call_status['robot'] = None
-                self.video_call_status['laptop'] = None
+                self.zoom_status_robot = None
+                self.zoom_status_participant = None
+            elif msg_json['payload'] == 'start':
+                self.zoom_status_participant = 'calling'
+                self.zoom_status_robot = 'ringing'
+            elif msg_json['payload'] == 'end':
+                self.zoom_status_robot = None
+                self.zoom_status_participant = None
+                call_duration = time.time() - self.zoom_status_call_start
+                print(f'Call ended. Lasted {call_duration} seconds.')
             await self.send_message(PATH_TEMI, msg_json)
+            await self.send_message(PATH_CONTROL, msg_json)
 
 
 # server = WebSocketServer()

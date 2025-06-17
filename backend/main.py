@@ -6,14 +6,18 @@ from fastapi import (
     Request, UploadFile, File
 )
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import HTMLResponse, JSONResponse
+from fastapi.responses import HTMLResponse, JSONResponse, Response
 from fastapi.staticfiles import StaticFiles
 from websocket_server import WebSocketServer, PATH_TEMI, PATH_CONTROL, PATH_PARTICIPANT
 
+from dotenv import load_dotenv
+
+
+load_dotenv()
 app = FastAPI()
 server = WebSocketServer()
 UPLOAD_DIR = "participant_data/media"
-
+ZOOM_JWT = os.environ.get('ZOOM_JWT')
 
 app.mount("/media", StaticFiles(directory=UPLOAD_DIR), name="media")
 
@@ -57,6 +61,12 @@ def get_status():
             k: len(v) for k, v in server.connections.items()
         }
     }
+
+
+@app.get("/zoomJWT")
+def return_zoom_jwt():
+    return Response(content=ZOOM_JWT, media_type="text/plain")
+
 
 @app.post("/upload")
 async def upload_file(file: UploadFile = File(...)):

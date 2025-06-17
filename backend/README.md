@@ -16,6 +16,7 @@ pip install -r requirements.txt
 # create a .env file in the `backend` dir, and add these
 FAMILY_INFO_STR=""
 OPENAI_API_KEY="sk-W9...g13Tm1h"
+ZOOM_JWT="..." # later we would probably do a more dynamic fetch
 ```
 
 

@@ -194,17 +194,7 @@ const WizardPage = () => {
                 </div>
 
                 <div className="row mt-2">
-                  <div className="col-sm-4">
-                    <button
-                        className="btn w-100 btn-warning"
-                        onClick={() => sendMessage({
-                          command: "changeMode",
-                          payload: "passive"
-                        })}>
-                      Passive
-                    </button>
-                  </div>
-                  <div className="col-sm-4">
+                  <div className="col-sm-6">
                     <button
                         className="btn w-100 btn-warning"
                         onClick={() => sendMessage({
@@ -214,7 +204,7 @@ const WizardPage = () => {
                       Reactive
                     </button>
                   </div>
-                  <div className="col-sm-4">
+                  <div className="col-sm-6">
                     <button
                         className="btn w-100 btn-warning"
                         onClick={() => sendMessage({
