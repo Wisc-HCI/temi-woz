@@ -47,6 +47,7 @@ class WebSocketServer:
         self.behavior_mode = None
         self.last_displayed = None
         self.messages = self._load_messages()
+        self.locations = []
 
 
     def _load_messages(self):
@@ -207,6 +208,14 @@ class WebSocketServer:
         elif msg_json['type'] == 'screenshot':
             await self.send_message(PATH_CONTROL, msg_json)
 
+        elif msg_json['type'] == 'saved_locations':
+            self.locations = msg_json.get("data", [])
+            print(f"Received locations: {self.locations}")
+            await self.send_message(PATH_CONTROL, {
+                "type": "locationList",
+                "data": self.locations
+            })
+
     async def participant_handler(self, websocket, message):
         try:
             msg_json = json.loads(message)
@@ -220,6 +229,25 @@ class WebSocketServer:
                 'stopMovement', 'turnBy']:
             await self.send_message(PATH_TEMI, msg_json)
 
+server = WebSocketServer()
+
+async def websocket_main():
+    async def handler(websocket, path):
+        print(f"[INFO] WebSocket requested path: {path}")
+
+        # Normalize: in case the frontend sends `/control/` or has query params
+        path = path.rstrip('/').split('?')[0]
+
+        if path not in [PATH_TEMI, PATH_CONTROL, PATH_PARTICIPANT]:
+            print(f"[ERROR] Unknown path {path}")
+            await websocket.close()
+            return
+
+        await server.handle_connection(websocket, path)
+
+
+if __name__ == "__main__":
+    asyncio.run(websocket_main())
 
 # server = WebSocketServer()
 # async def websocket_main():
