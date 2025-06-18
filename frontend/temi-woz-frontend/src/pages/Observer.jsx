@@ -8,6 +8,8 @@ import { connectWebSocket, sendMessageWS } from "../utils/ws";
 import { fetchZoomToken } from "../utils/utils"; 
 
 
+// TODO: button to fetch current Zoom status
+
 
 const ObserverPage = () => {
 
@@ -210,7 +212,14 @@ const ObserverPage = () => {
                   </button>
                 </div>
                 <div className="col-sm-3">
-                  
+                  <button
+                      className="btn w-100 btn-primary"
+                      onClick={() => sendMessage({
+                        command: "video_call",
+                        payload: "end"
+                      })}>
+                    End All
+                  </button>
                 </div>
               </div>
 
@@ -219,43 +228,15 @@ const ObserverPage = () => {
                   <button
                       className="btn w-100 btn-primary"
                       onClick={() => sendMessage({
-                        command: "tiltBy",
-                        payload: "5"
+                        command: "video_call",
+                        payload: "ending_alert"
                       })}>
-                    Up
+                    Announce Ending
                   </button>
                 </div>
-                <div className="col-sm-3">
-                  <button
-                      className="btn w-100 btn-primary"
-                      onClick={() => sendMessage({
-                        command: "tiltBy",
-                        payload: "-5"
-                      })}>
-                    Down
-                  </button>
-                </div>
-                <div className="col-sm-3">
-                  <button
-                      className="btn w-100 btn-primary"
-                      onClick={() => sendMessage({
-                        command: "tiltAngle",
-                        payload: "0"
-                      })}>
-                    👀 ahead
-                  </button>
-                </div>
-                <div className="col-sm-3">
-                  <button
-                      className="btn w-100 btn-danger"
-                      onClick={() => sendMessage({
-                        command: "stopMovement",
-                        payload: ""
-                      })}>
-                    STOP
-                  </button>
-                </div>
-              </div>  
+              </div>
+
+
             </div>
           </div>
 

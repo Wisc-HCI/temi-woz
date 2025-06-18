@@ -10,12 +10,14 @@ const WizardPage = () => {
   const [inputText, setInputText] = useState("");
   const [pressedButtons, setPressedButtons] = useState([]);
   const [screenshotData, setScreenshotData] = useState(null)
+  const [screenshotSource, setScreenshotSource] = useState("temi");
   const [isRecording, setIsRecording] = useState(false);
   const [savedLocations, setSavedLocations] = useState([]);
   const [behaviorMode, setBehaviorMode] = useState(null);
   const [uploadNotification, setUploadNotification] = useState(null);
   const [latestUploadedFile, setLatestUploadedFile] = useState(null);
   const [displayedMedia, setDisplayedMedia] = useState(null);
+  const [modalOpen, setModalOpen] = useState(false);
 
   const sendMessage = (message) => {
     sendMessageWS(message);
@@ -109,6 +111,16 @@ const WizardPage = () => {
     );
   }
 
+  const getModeText = () => {
+    if (behaviorMode === null) {
+      return ' --- '
+    } else if (behaviorMode === 'reactive') {
+      return 'User Init. (reactive)';
+    } else if (behaviorMode === 'proactive') {
+      return 'Robot Init. (proactive)';
+    }
+  }
+
   
   return (
     <div className="container-fluid p-0">
@@ -126,14 +138,42 @@ const WizardPage = () => {
         </div>
       )}
 
+      {modalOpen && screenshotData && (
+        <div
+          className="modal fade show"
+          style={{ display: "block", backgroundColor: "rgba(0, 0, 0, 0.8)" }}
+          onClick={() => setModalOpen(false)}
+        >
+          <div
+            className="modal-dialog modal-xl modal-dialog-centered"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="modal-content">
+              <div className="modal-body text-center p-0 bg-black">
+                <img
+                  src={screenshotData}
+                  alt="Screen Shot"
+                  className="img-fluid"
+                />
+              </div>
+              <div className="modal-footer justify-content-center">
+                <button className="btn btn-secondary" onClick={() => setModalOpen(false)}>
+                  Close
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
       <div className="container-fluid main-content mt-5 pt-2">
         <div className="row">
           {/* Control Panel */}
-          <div className="col-md-5">
+          <div className="col-md-4">
             <h4>Message Log</h4>
             <div
-              className="border bg-light p-2"
-              style={{ height: "400px", overflowY: "auto", fontSize: "0.9rem" }}
+              className="border bg-light p-2 mt-2"
+              style={{ height: "200px", overflowY: "auto", fontSize: "0.9rem" }}
             >
               {log.map((line, idx) => (
                 <div key={idx}>{line}</div>
@@ -177,20 +217,58 @@ const WizardPage = () => {
                   }
                 }}
               >
-                💬 Play on Robot
+                Play on Robot
               </button>
             </div>
 
+
+            <div className="mb-2 mt-4">
+              <h4>Screenshot</h4>
+              <select
+                className="form-select"
+                value={screenshotSource}
+                onChange={(e) => setScreenshotSource(e.target.value)}
+              >
+                <option value="temi">Temi</option>
+                <option value="web">Participant Web</option>
+              </select>
+            </div>
+            
+            {screenshotData &&
+              <div className="mt-3 d-flex align-items-center justify-content-center">
+                <img
+                  onClick={() => setModalOpen(true)}
+                  src={screenshotData}
+                  alt="Robot Screenshot"
+                  style={{
+                    maxWidth: '200px', maxHeight: '150px',
+                    border: '1px solid #ccc', cursor: "pointer"
+                  }}
+                />
+              </div>
+            }
+            <button
+                className="btn w-100 btn-success mt-1"
+                onClick={() => {
+                  setScreenshotData(null)
+                  sendMessage({
+                    command: "refreshScreenShot",
+                    payload: screenshotSource
+                  })
+                }}>
+              {screenshotData ? "Refresh" : "Fetch"}
+            </button>
+
           </div>
 
-          <div className="col-md-7">
+          <div className="col-md-8">
 
             <div className="row">
 
               <div className="col-md-7">
                 <h4>Behavioral Modes</h4>
                 <div className="alert alert-info mt-2">
-                  🤖 Current Behavior Mode: <strong>{behaviorMode || ' --- '}</strong>
+                  🤖 Current Mode: <strong>{getModeText()}</strong>
                 </div>
 
                 <div className="row mt-2">
@@ -201,7 +279,7 @@ const WizardPage = () => {
                           command: "changeMode",
                           payload: "reactive"
                         })}>
-                      Reactive
+                      User Init.
                     </button>
                   </div>
                   <div className="col-sm-6">
@@ -211,34 +289,14 @@ const WizardPage = () => {
                           command: "changeMode",
                           payload: "proactive"
                         })}>
-                      Proactive
+                      Robot Init.
                     </button>
                   </div>
                 </div>
               </div>
 
               <div className="col-md-5">
-                <h4>Screenshot</h4>
-                {screenshotData &&
-                  <div className="mt-3">
-                    <img
-                      src={screenshotData}
-                      alt="Robot Screenshot"
-                      style={{ width: '100%', maxWidth: '500px', border: '1px solid #ccc' }}
-                    />
-                  </div>
-                }
-                <button
-                    className="btn w-100 btn-success"
-                    onClick={() => {
-                      setScreenshotData(null)
-                      sendMessage({
-                        command: "refreshScreenShot",
-                        payload: ""
-                      })
-                    }}>
-                  {screenshotData ? "Refresh" : "Fetch"}
-                </button>
+
               </div>
             </div>
 
@@ -246,6 +304,7 @@ const WizardPage = () => {
 
             <h4 className="mt-2">Go To ...</h4>
             {navButtonsBlock()}
+
 
             <h4 className="mt-2">Movements</h4>
             <div className="row mt-2">
@@ -418,6 +477,8 @@ const WizardPage = () => {
               </div>
             </div>
 
+
+            <h4 className="mt-2">Participant Web View</h4>
             <div className="row mt-2">
               <div className="col-sm-4">
                 <button
@@ -439,8 +500,31 @@ const WizardPage = () => {
                   Hide Buttons
                 </button>
               </div>
+              <div className="col-sm-4">
+                <button
+                    className="btn w-100 btn-primary"
+                    onClick={() => sendMessage({
+                      command: "allowCapture",
+                      payload: ""
+                    })}>
+                  Enable Capture Btn
+                </button>
+              </div>
             </div>
 
+{/*            <h4 className="mt-2">Robot Actions</h4>
+            <div className="row mt-2">
+              <div className="col-sm-4">
+                <button
+                    className="btn w-100 btn-primary"
+                    onClick={() => sendMessage({
+                      command: "displayMode",
+                      payload: "admin"
+                    })}>
+                  Show Buttons
+                </button>
+              </div>
+            </div>*/}
             
 
 

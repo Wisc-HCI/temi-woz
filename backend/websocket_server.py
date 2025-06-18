@@ -69,7 +69,7 @@ class WebSocketServer:
         try:
             while True:
                 message = await websocket.receive_text()
-                print(message)
+                print(message[:100])
                 if message == '':
                     pass
                 if ws_path == PATH_TEMI:
@@ -90,7 +90,7 @@ class WebSocketServer:
 
     async def send_message(self, group, message):
         # we really just expect one to be in the set
-        print(f'Sending message to {group}: {message}')
+        print(f'Sending message to {group}: {str(message)[:100]}')
         for connection in self.connections[group]:
             await connection.send_json(message)
             # try:
@@ -144,8 +144,14 @@ class WebSocketServer:
             await self.send_message(PATH_TEMI, msg_json)
             await self.send_message(PATH_PARTICIPANT, msg_json)
 
+        elif msg_json['command'] == 'refreshScreenShot':
+            if msg_json['payload'] == 'temi':
+                await self.send_message(PATH_TEMI, msg_json)
+            elif msg_json['payload'] == 'web':
+                await self.send_message(PATH_PARTICIPANT, msg_json)
+
         elif msg_json['command'] in [
-                'skidJoy', 'takePicture', 'refreshScreenShot',
+                'skidJoy', 'takePicture',
                 'tiltBy', 'tiltAngle', 'stopMovement', 'turnBy',
                 'queryLocations', 'goTo']:
             await self.send_message(PATH_TEMI, msg_json)
@@ -174,6 +180,9 @@ class WebSocketServer:
             await self.send_message(PATH_CONTROL, msg)
             await self.send_message(PATH_PARTICIPANT, msg)
 
+        elif msg_json['command'] == 'allowCapture':
+            await self.send_message(PATH_PARTICIPANT, msg_json)
+
         elif msg_json['command'] == 'video_call':
             action = msg_json['payload']
             if action == 'proactive_call':
@@ -183,6 +192,13 @@ class WebSocketServer:
                     'type': 'video_call',
                     'data': action
                 }
+                await self.send_message(PATH_TEMI, msg_json)
+                await self.send_message(PATH_PARTICIPANT, participant_msg)
+            elif action == 'end':
+                self.zoom_status_robot = None
+                self.zoom_status_participant = None
+                call_duration = time.time() - self.zoom_status_call_start
+                print(f'Call ended. Lasted {call_duration} seconds.')
                 await self.send_message(PATH_TEMI, msg_json)
                 await self.send_message(PATH_PARTICIPANT, participant_msg)
 
@@ -226,6 +242,9 @@ class WebSocketServer:
 
         elif msg_json['type'] == 'screenshot':
             await self.send_message(PATH_CONTROL, msg_json)
+
+        elif msg_json['type'] == 'declined_share':
+            await self.send_message(PATH_PARTICIPANT, msg_json)
 
         elif msg_json['type'] == 'video_call':
             action = msg_json.get("data")
@@ -320,6 +339,23 @@ class WebSocketServer:
                 print(f'Call ended. Lasted {call_duration} seconds.')
             await self.send_message(PATH_TEMI, msg_json)
             await self.send_message(PATH_CONTROL, msg_json)
+
+        elif msg_json['command'] == 'screenshot':
+            msg = {
+                'type': 'screenshot',
+                'data': msg_json['payload']
+            }
+            await self.send_message(PATH_CONTROL, msg)
+
+        elif msg_json['command'] == 'identify':
+            if msg_json.get('payload') == 'webpage':
+                msg = {
+                    'type': 'initial_status',
+                    'data': {
+                        'behavior_mode': self.behavior_mode,
+                    }
+                }
+                await self.send_message(PATH_PARTICIPANT, msg)
 
 
 # server = WebSocketServer()

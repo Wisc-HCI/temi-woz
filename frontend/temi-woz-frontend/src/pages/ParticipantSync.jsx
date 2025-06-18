@@ -1,15 +1,15 @@
 // src/pages/ParticipantPage.jsx
-import React, { useEffect, useState } from 'react'
+import React, { useEffect, useState, useRef } from 'react'
 import uitoolkit from "@zoom/videosdk-ui-toolkit";
 import "@zoom/videosdk-ui-toolkit/dist/videosdk-ui-toolkit.css";
 
 import { connectWebSocket, sendMessageWS } from "../utils/ws";
 import { useGamepadControls } from "../utils/useGamepadControls";
-import { fetchZoomToken } from "../utils/utils"; 
+import { fetchZoomToken, captureAndSend } from "../utils/utils"; 
 
 
 
-const ParticipantPage = () => {
+const ParticipantSyncPage = () => {
 
   const [showZoomUI, setShowZoomUI] = useState(false);
   const [videoCallStatus, setVideoCallStatus] = useState(null);
@@ -18,6 +18,7 @@ const ParticipantPage = () => {
   const [showAdminButtons, setShowAdminButtons] = useState(true);
   const [behaviorMode, setBehaviorMode] = useState(null);
 
+  const ringtoneRef = useRef(null);
 
   const sendMessage = (message) => {
     sendMessageWS(message);
@@ -51,8 +52,7 @@ const ParticipantPage = () => {
           setTimeout(() => setNotification(null), 5000);
         } else if ( data.data === 'proactive_call') {
           setVideoCallStatus('ringing');
-          // todo: play ring sound
-          // todo: play audio about robot calling
+          playRingtoneWithPause();
         } else if ( data.data === 'connected') {
           setVideoCallStatus('connected');
           setTimeout(() => setShowZoomUI(true), 1000);
@@ -63,10 +63,42 @@ const ParticipantPage = () => {
         } else {
           setShowAdminButtons(false);
         }
+      } else if (data.command === "refreshScreenShot") {
+        captureAndSend(sendMessage);
       }
     }
     connectWebSocket(onWsMessage, "participant");
   }, []);
+
+
+  const playRingtoneWithPause = () => {
+    const audio = new Audio('/audio/ringtone.mp3');
+    ringtoneRef.current = audio;
+
+    const loopWithPause = () => {
+      audio.currentTime = 0;
+      audio.play().catch(e => console.warn("Autoplay blocked:", e));
+
+      // When finished playing...
+      audio.onended = () => {
+        setTimeout(() => {
+          if (ringtoneRef.current === audio) {
+            loopWithPause();
+          }
+        }, 1500);
+      };
+    };
+
+    loopWithPause();
+  };
+
+  const stopRingtone = () => {
+    if (ringtoneRef.current) {
+      ringtoneRef.current.pause();
+      ringtoneRef.current.currentTime = 0;
+      ringtoneRef.current = null;
+    }
+  };
 
   useGamepadControls(sendMessage, setPressedButtons);
 
@@ -119,6 +151,7 @@ const ParticipantPage = () => {
   }
 
   const answerBtnOnClick = () => {
+    stopRingtone();
     if (behaviorMode === 'proactive') {
       setVideoCallStatus('waiting');
       sendMessage({
@@ -133,6 +166,22 @@ const ParticipantPage = () => {
       })
       setTimeout(() => setShowZoomUI(true), 2000);
     }
+  }
+
+  const dismissBtnOnClick = () => {
+    stopRingtone();
+    setVideoCallStatus(null);
+    sendMessage({
+      command: "video_call",
+      payload: "dismiss"
+    })
+  }
+
+  const showCallButton = () => {
+    return (
+      behaviorMode === 'reactive' && 
+      (videoCallStatus === null || videoCallStatus === 'calling')
+      )
   }
 
   return (
@@ -180,9 +229,7 @@ const ParticipantPage = () => {
               </div>
               <div className="col-md-6">
                 <button
-                  onClick={() => {
-                    setShowZoomUI(true);
-                  }}
+                  onClick={() => {dismissBtnOnClick()}}
                   className="btn btn-primary">
                   Dismiss
                 </button>
@@ -199,7 +246,7 @@ const ParticipantPage = () => {
           </div>
         }
 
-        {(videoCallStatus === null || videoCallStatus === 'calling') &&
+        {showCallButton() &&
           <>
             {/*<div className="row">
               <div className="col-md-10 offset-md-1">
@@ -400,4 +447,4 @@ const ParticipantPage = () => {
   );
 };
 
-export default ParticipantPage;
+export default ParticipantSyncPage;

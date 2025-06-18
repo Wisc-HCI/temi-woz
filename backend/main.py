@@ -80,6 +80,11 @@ async def upload_file(file: UploadFile = File(...)):
         "filename": file.filename,
         "url": f"/view/{file.filename}"
     })
+    await server.send_message(PATH_PARTICIPANT, {
+        "type": "media_uploaded",
+        "filename": file.filename,
+        "url": f"/view/{file.filename}"
+    })
 
     return {
         "status": "success",
