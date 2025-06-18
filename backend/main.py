@@ -17,6 +17,7 @@ load_dotenv()
 app = FastAPI()
 server = WebSocketServer()
 UPLOAD_DIR = "participant_data/media"
+MEDIA_INDEX_FILE = os.path.join(UPLOAD_DIR, "display_list.txt")
 ZOOM_JWT = os.environ.get('ZOOM_JWT')
 
 app.mount("/media", StaticFiles(directory=UPLOAD_DIR), name="media")
@@ -68,29 +69,45 @@ def return_zoom_jwt():
     return Response(content=ZOOM_JWT, media_type="text/plain")
 
 
+
+@app.post("/add-media-to-display")
+async def add_media(request: Request):
+    print(request)
+    data = await request.json()
+    filename = data.get("filename", "").strip()
+    # Append filename
+    with open(MEDIA_INDEX_FILE, "a") as f:
+        f.write(f"{filename}\n")
+
+    await server.send_message(PATH_CONTROL, {
+        "type": "media_uploaded",
+        "filename": filename,
+        "url": f"/view/{filename}"
+    })
+    await server.send_message(PATH_PARTICIPANT, {
+        "type": "media_uploaded",
+        "filename": filename,
+        "url": f"/view/{filename}"
+    })
+    return JSONResponse(content={"message": "Added successfully"})
+
+
+
 @app.post("/upload")
 async def upload_file(file: UploadFile = File(...)):
+    '''
+    Aside from storing it, also announces it to users
+    '''
     save_path = os.path.join(UPLOAD_DIR, file.filename)
 
     with open(save_path, "wb") as f:
         shutil.copyfileobj(file.file, f)
-
-    await server.send_message(PATH_CONTROL, {
-        "type": "media_uploaded",
-        "filename": file.filename,
-        "url": f"/view/{file.filename}"
-    })
-    await server.send_message(PATH_PARTICIPANT, {
-        "type": "media_uploaded",
-        "filename": file.filename,
-        "url": f"/view/{file.filename}"
-    })
-
     return {
         "status": "success",
         "filename": file.filename,
         "path": save_path
     }
+
 
 # mostly for thumbnails and Temi display
 @app.get("/view/{filename}", response_class=HTMLResponse)
@@ -175,13 +192,21 @@ async def list_media():
 
 @app.get("/api/media-list")
 async def get_media_list():
-    files = os.listdir(UPLOAD_DIR)
-    files.sort(reverse=True)
+    # files = os.listdir(UPLOAD_DIR)
+    # files.sort(reverse=True)
 
-    media_files = []
-    for file in files:
-        lower = file.lower()
-        if lower.endswith((".jpg", ".jpeg", ".png", ".gif", ".mp4", ".webm")):
-            media_files.append(file)
+    # media_files = []
+    # for file in files:
+    #     lower = file.lower()
+    #     if lower.endswith((".jpg", ".jpeg", ".png", ".gif", ".mp4", ".webm")):
+    #         media_files.append(file)
+
+    # return JSONResponse(content={"files": media_files})
+    try:
+        with open(MEDIA_INDEX_FILE, "r") as f:
+            lines = f.readlines()
+        media_files = [line.strip() for line in lines if line.strip()]
+    except FileNotFoundError:
+        media_files = []
 
     return JSONResponse(content={"files": media_files})

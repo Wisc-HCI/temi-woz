@@ -2,7 +2,7 @@
 import React, { useEffect, useState } from 'react'
 import { connectWebSocket, sendMessageWS } from "../utils/ws";
 import MediaList from '../components/MediaList';
-
+import { captureAndSend } from "../utils/utils"; 
 
 
 const ParticipantAsyncPage = () => {
@@ -64,6 +64,8 @@ const ParticipantAsyncPage = () => {
         }
       } else if (data.command === "allowCapture") {
         setCanRequest(true);
+      } else if (data.command === "refreshScreenShot") {
+        captureAndSend(sendMessage);
       }
     }
     connectWebSocket(onWsMessage, "participant");

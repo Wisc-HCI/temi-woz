@@ -1,11 +1,18 @@
 import asyncio
+from dotenv import load_dotenv
 import json
+import os
 import time
 from websockets.asyncio.server import serve
 from fastapi import WebSocketDisconnect
 import signal
 from llm_model import generate_response
 
+
+load_dotenv()
+
+
+ZOOM_JWT = os.environ.get('ZOOM_JWT')
 
 PATH_TEMI = '/temi'
 PATH_CONTROL = '/control'
@@ -157,9 +164,8 @@ class WebSocketServer:
             await self.send_message(PATH_TEMI, msg_json)
 
         elif msg_json['command'] == 'navigateCamera':
-            if self.behavior_mode == PASSIVE:
+            if self.behavior_mode == PROACTIVE:
                 msg_json['payload'] = 'headless'
-                await self.send_message(PATH_TEMI, msg_json)
             await self.send_message(PATH_TEMI, msg_json)
 
         elif msg_json['command'] == 'startVideo':
@@ -179,9 +185,14 @@ class WebSocketServer:
             }
             await self.send_message(PATH_CONTROL, msg)
             await self.send_message(PATH_PARTICIPANT, msg)
+            await self.send_message(PATH_TEMI, msg_json)
 
         elif msg_json['command'] == 'allowCapture':
             await self.send_message(PATH_PARTICIPANT, msg_json)
+
+        elif msg_json['command'] == 'zoomToken':
+            msg_json['payload'] = ZOOM_JWT
+            await self.send_message(PATH_TEMI, msg_json)
 
         elif msg_json['command'] == 'video_call':
             action = msg_json['payload']
@@ -199,6 +210,10 @@ class WebSocketServer:
                 self.zoom_status_participant = None
                 call_duration = time.time() - self.zoom_status_call_start
                 print(f'Call ended. Lasted {call_duration} seconds.')
+                participant_msg = {
+                    'type': 'video_call',
+                    'data': 'end'
+                }
                 await self.send_message(PATH_TEMI, msg_json)
                 await self.send_message(PATH_PARTICIPANT, participant_msg)
 
@@ -212,6 +227,20 @@ class WebSocketServer:
                     }
                 }
                 await self.send_message(PATH_CONTROL, msg)
+
+        elif msg_json['command'] == 'zoom_status':
+            call_duration = None
+            if self.zoom_status_robot == 'connected':
+                call_duration = time.time() - self.zoom_status_call_start
+            msg = {
+                'type': 'zoom_status',
+                'data': {
+                    'participant': self.zoom_status_participant,
+                    'robot': self.zoom_status_robot,
+                    'call_duration': call_duration
+                }
+            }
+            await self.send_message(PATH_CONTROL, msg)
 
     async def temi_handler(self, websocket, message):
         try:
@@ -259,11 +288,11 @@ class WebSocketServer:
             elif action == 'answer':
                 if self.behavior_mode == PROACTIVE:
                     if self.zoom_status_participant == 'ringing':
-                        self.zoom_status_robot == 'waiting'
+                        self.zoom_status_robot = 'waiting'
                         return
                     elif self.zoom_status_participant == 'waiting':
-                        self.zoom_status_robot == 'connected'
-                        self.zoom_status_participant == 'connected'
+                        self.zoom_status_robot = 'connected'
+                        self.zoom_status_participant = 'connected'
                         robot_msg = {
                             'command': 'video_call',
                             'payload': 'connected'
@@ -304,11 +333,11 @@ class WebSocketServer:
             if msg_json['payload'] == 'answer':
                 if self.behavior_mode == PROACTIVE:
                     if self.zoom_status_robot == 'ringing':
-                        self.zoom_status_participant == 'waiting'
+                        self.zoom_status_participant = 'waiting'
                         return
                     elif self.zoom_status_robot == 'waiting':
-                        self.zoom_status_robot == 'connected'
-                        self.zoom_status_participant == 'connected'
+                        self.zoom_status_robot = 'connected'
+                        self.zoom_status_participant = 'connected'
                         robot_msg = {
                             'command': 'video_call',
                             'payload': 'connected'

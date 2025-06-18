@@ -419,7 +419,7 @@ const WizardPage = () => {
                       command: "navigateCamera",
                       payload: ""
                     })}>
-                  {behaviorMode === 'passive' ? "Activate Camera" : "Display Camera" }
+                  {behaviorMode === 'proactive' ? "Activate Camera" : "Display Camera" }
                 </button>
               </div>
               <div className="col-sm-6">
@@ -512,19 +512,20 @@ const WizardPage = () => {
               </div>
             </div>
 
-{/*            <h4 className="mt-2">Robot Actions</h4>
+            <h4 className="mt-2">Robot Admin</h4>
             <div className="row mt-2">
-              <div className="col-sm-4">
+              {/* Does not work on Robot yet */}
+              {/*<div className="col-sm-4">
                 <button
                     className="btn w-100 btn-primary"
                     onClick={() => sendMessage({
-                      command: "displayMode",
-                      payload: "admin"
+                      command: "zoomToken",
+                      payload: ""
                     })}>
-                  Show Buttons
+                  Start Zoom
                 </button>
-              </div>
-            </div>*/}
+              </div>*/}
+            </div>
             
 
 

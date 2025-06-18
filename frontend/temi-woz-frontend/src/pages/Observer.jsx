@@ -8,7 +8,7 @@ import { connectWebSocket, sendMessageWS } from "../utils/ws";
 import { fetchZoomToken } from "../utils/utils"; 
 
 
-// TODO: button to fetch current Zoom status
+// TODO: periodic fetch current Zoom status and display
 
 
 const ObserverPage = () => {
@@ -16,6 +16,7 @@ const ObserverPage = () => {
   const [showZoomUI, setShowZoomUI] = useState(false);
   const [videoCallStatus, setVideoCallStatus] = useState(null);
   const [zoomStream, setZoomStream] = useState(null);
+  const [zoomStatus, setZoomStatus] = useState(null);
 
   var client = ZoomVideo.createClient()
 
@@ -27,6 +28,30 @@ const ObserverPage = () => {
   const sendMessage = (message) => {
     sendMessageWS(message);
   };
+
+  function useZoomStatusPoller(sendMessage, intervalMs = 2500) {
+    useEffect(() => {
+      const intervalId = setInterval(() => {
+        sendMessage({ command: "zoom_status" });
+      }, intervalMs);
+
+      return () => clearInterval(intervalId); // Cleanup on unmount
+    }, [sendMessage, intervalMs]);
+  }
+
+  // poll zoom call status
+  useZoomStatusPoller(sendMessage);
+
+  function formatDuration(seconds) {
+    if (seconds > 10000) {
+      return 'error'
+    }
+    const totalSeconds = Math.floor(seconds);
+    const minutes = Math.floor(totalSeconds / 60);
+    const secondsLeft = totalSeconds % 60;
+    return `${minutes}m ${secondsLeft}s`;
+  }
+
 
   useEffect(() => {
     const onWsMessage = (data) => {
@@ -40,6 +65,8 @@ const ObserverPage = () => {
       } else if (data.type === "video_call") {
         if (data.data === 'start')
         setVideoCallStatus('ringing');
+      } else if (data.type === "zoom_status") {
+        setZoomStatus(data.data)
       }
     }
     // share the path of the main control page
@@ -116,41 +143,6 @@ const ObserverPage = () => {
           </button>
         }
 
-        {videoCallStatus === 'ringing' &&
-          <>
-            <div className="row">
-              <div className="col-md-10 offset-md-1">
-                <h1>Incomging call!</h1>
-              </div>
-            </div>
-            <div className="row">
-              <div className="col-md-6">
-                <button
-                  onClick={() => {
-                    setVideoCallStatus('connected');
-                    sendMessage({
-                      command: "video_call",
-                      payload: "answer"
-                    })
-                    setTimeout(() => setShowZoomUI(true), 2000);
-                  }}
-                  className="btn btn-primary">
-                  Answer Call
-                </button>
-              </div>
-              <div className="col-md-6">
-                <button
-                  onClick={() => {
-                    setShowZoomUI(true);
-                  }}
-                  className="btn btn-primary">
-                  Dismiss
-                </button>
-              </div>
-            </div>
-          </>
-        }
-
         
           <div
             style={{
@@ -177,6 +169,17 @@ const ObserverPage = () => {
             </div>
 
           </div>
+
+          {zoomStatus &&
+            <div>
+              <h3>Zoom Call Status</h3>
+              <p><strong>Robot:</strong> {zoomStatus.robot || 'N/A'}</p>
+              <p><strong>Participant:</strong> {zoomStatus.participant || 'N/A'}</p>
+              <p>
+                <strong>Call Duration:</strong> {formatDuration(zoomStatus.call_duration)}
+              </p>
+            </div>
+          }
 
           <div className="row">
             <div className="col-md-12">
@@ -234,6 +237,15 @@ const ObserverPage = () => {
                     Announce Ending
                   </button>
                 </div>
+                {/*<div className="col-sm-3">
+                  <button
+                      className="btn w-100 btn-primary"
+                      onClick={() => sendMessage({
+                        command: "zoom_status"
+                      })}>
+                    Call Status
+                  </button>
+                </div>*/}
               </div>
 
 
