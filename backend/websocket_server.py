@@ -5,7 +5,6 @@ from fastapi import WebSocketDisconnect
 import signal
 from llm_model import generate_response
 
-
 PATH_TEMI = '/temi'
 PATH_CONTROL = '/control'
 PATH_PARTICIPANT = '/participant'
@@ -235,7 +234,6 @@ async def websocket_main():
     async def handler(websocket, path):
         print(f"[INFO] WebSocket requested path: {path}")
 
-        # Normalize: in case the frontend sends `/control/` or has query params
         path = path.rstrip('/').split('?')[0]
 
         if path not in [PATH_TEMI, PATH_CONTROL, PATH_PARTICIPANT]:
@@ -245,23 +243,5 @@ async def websocket_main():
 
         await server.handle_connection(websocket, path)
 
-
 if __name__ == "__main__":
     asyncio.run(websocket_main())
-
-# server = WebSocketServer()
-# async def websocket_main():
-#     async def handler(websocket):
-#         await server.handle_connection(websocket)
-
-#     server_proc = await serve(handler, "", 9090)
-#     print("🚀 WebSocket server running on port 9090")
-
-#     try:
-#         await asyncio.Future()  # Run forever (until Ctrl+C)
-#     except KeyboardInterrupt:
-#         print("🛑 KeyboardInterrupt received, shutting down...")
-#     finally:
-#         server_proc.close()
-#         await server_proc.wait_closed()
-#         print("✅ Server stopped cleanly")

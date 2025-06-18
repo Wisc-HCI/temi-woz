@@ -85,9 +85,7 @@ const WizardPage = () => {
     return () => ws.close(); // Cleanup
   }, []);
 
-
   useGamepadControls(sendMessage, setPressedButtons);
-
 
   function sendGoTo(locationName) {
     if (wsRef.current?.readyState === WebSocket.OPEN) {
@@ -99,7 +97,6 @@ const WizardPage = () => {
       console.warn("WebSocket is not open");
     }
   }
-
 
   function chunkArray(arr, chunkSize) {
     return Array.from({ length: Math.ceil(arr.length / chunkSize) }, (_, i) =>
