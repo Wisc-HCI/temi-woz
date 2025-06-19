@@ -11,13 +11,20 @@ const WizardPage = () => {
   const [pressedButtons, setPressedButtons] = useState([]);
   const [screenshotData, setScreenshotData] = useState(null)
   const [screenshotSource, setScreenshotSource] = useState("temi");
+  const [snapshotData, setSnapshotData] = useState(null)
+  const [lastSnapshotTime, setLastSnapshotTime] = useState(null);
+  const [secondsSinceSnapshot, setSecondsSinceSnapshot] = useState(null);
   const [isRecording, setIsRecording] = useState(false);
   const [savedLocations, setSavedLocations] = useState([]);
   const [behaviorMode, setBehaviorMode] = useState(null);
   const [uploadNotification, setUploadNotification] = useState(null);
   const [latestUploadedFile, setLatestUploadedFile] = useState(null);
   const [displayedMedia, setDisplayedMedia] = useState(null);
-  const [modalOpen, setModalOpen] = useState(false);
+  const [modalData, setModalData] = useState(null);
+  const [canActivateCamera, setCanActivateCamera] = useState(true);
+  const [canTakePicture, setCanTakePicture] = useState(false);
+  const [canStartVideo, setCanStartVideo] = useState(false);
+  const [canStopVideo, setCanStopVideo] = useState(false);
 
   const sendMessage = (message) => {
     sendMessageWS(message);
@@ -27,6 +34,17 @@ const WizardPage = () => {
       setDisplayedMedia(null);
     }
   };
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      if (lastSnapshotTime) {
+        const diff = Math.floor((Date.now() - lastSnapshotTime) / 1000);
+        setSecondsSinceSnapshot(diff);
+      }
+    }, 1000);
+
+    return () => clearInterval(interval);
+  }, [lastSnapshotTime]);
 
   useEffect(() => {
     const onWsMessage = (data) => {
@@ -42,10 +60,21 @@ const WizardPage = () => {
       } else if (data.type === "behavior_mode") {
         setBehaviorMode(data.data);
       } else if (data.type === "media_uploaded") {
-        const msg = `✅ Media uploaded: ${data.filename}`;
-        setUploadNotification(msg);
-        setLatestUploadedFile(data.filename); 
-        setTimeout(() => setUploadNotification(null), 3000);
+        if (data.data === 'silent') {
+          setTimeout(() => {
+            // for this setup, all media is uploaded after capture,
+            // and the camera needs to / can be reopened afterwards
+            // (a more rigorous imple. would be to listen to "share/dont share")
+            setCanActivateCamera(true);
+          }, 10000);
+        } else {
+          const msg = `✅ Media uploaded: ${data.filename}`;
+          setUploadNotification(msg);
+          setLatestUploadedFile(data.filename); 
+          setTimeout(() => {
+            setUploadNotification(null);
+          }, 3000);
+        }
       } else if (data.type === "saved_locations") {
         const locationList = data.data;
         setSavedLocations(locationList);
@@ -53,6 +82,22 @@ const WizardPage = () => {
         setScreenshotData(
           `data:image/jpeg;base64,${data.data}`
         );
+      } else if (data.type === "snapshot") {
+        setSnapshotData(
+          `data:image/jpeg;base64,${data.data}`
+        );
+        setLastSnapshotTime(Date.now());
+      } else if (data.type == "video_recording") {
+        if (data.data === 'started') {
+          setCanStopVideo(true)
+        } else {
+          setCanStopVideo(false)
+        }
+      } else if (data.type == "camera") {
+        if (data.data === 'ready') {
+          setCanTakePicture(true);
+          setCanStartVideo(true);
+        }
       }
     }
     connectWebSocket(onWsMessage, "control");
@@ -138,11 +183,11 @@ const WizardPage = () => {
         </div>
       )}
 
-      {modalOpen && screenshotData && (
+      {modalData && (
         <div
           className="modal fade show"
           style={{ display: "block", backgroundColor: "rgba(0, 0, 0, 0.8)" }}
-          onClick={() => setModalOpen(false)}
+          onClick={() => setModalData(null)}
         >
           <div
             className="modal-dialog modal-xl modal-dialog-centered"
@@ -151,13 +196,13 @@ const WizardPage = () => {
             <div className="modal-content">
               <div className="modal-body text-center p-0 bg-black">
                 <img
-                  src={screenshotData}
+                  src={modalData}
                   alt="Screen Shot"
                   className="img-fluid"
                 />
               </div>
               <div className="modal-footer justify-content-center">
-                <button className="btn btn-secondary" onClick={() => setModalOpen(false)}>
+                <button className="btn btn-secondary" onClick={() => setModalData(null)}>
                   Close
                 </button>
               </div>
@@ -237,7 +282,7 @@ const WizardPage = () => {
             {screenshotData &&
               <div className="mt-3 d-flex align-items-center justify-content-center">
                 <img
-                  onClick={() => setModalOpen(true)}
+                  onClick={() => setModalData(screenshotData)}
                   src={screenshotData}
                   alt="Robot Screenshot"
                   style={{
@@ -296,7 +341,26 @@ const WizardPage = () => {
               </div>
 
               <div className="col-md-5">
-
+                {(secondsSinceSnapshot !== null && secondsSinceSnapshot < 30) &&
+                  <>
+                    <div className="text-muted small mt-1">
+                      Taken {secondsSinceSnapshot} second{secondsSinceSnapshot === 1 ? '' : 's'} ago
+                    </div>
+                    {snapshotData &&
+                      <div className="mt-3 d-flex align-items-center justify-content-center">
+                        <img
+                          onClick={() => setModalData(snapshotData)}
+                          src={snapshotData}
+                          alt="Robot View"
+                          style={{
+                            maxWidth: '200px', maxHeight: '150px',
+                            border: '1px solid #ccc', cursor: "pointer"
+                          }}
+                        />
+                      </div>
+                    }
+                  </>
+                }
               </div>
             </div>
 
@@ -369,7 +433,11 @@ const WizardPage = () => {
             <div className="row mt-2">
               <div className="col-sm-3">
                 <button
-                    className="btn w-100 btn-primary"
+                    className={
+                      `btn w-100 ${pressedButtons.includes(3) ?
+                        "btn-success" :
+                        "btn-primary"}`
+                    }
                     onClick={() => sendMessage({
                       command: "tiltBy",
                       payload: "5"
@@ -379,7 +447,11 @@ const WizardPage = () => {
               </div>
               <div className="col-sm-3">
                 <button
-                    className="btn w-100 btn-primary"
+                    className={
+                      `btn w-100 ${pressedButtons.includes(0) ?
+                        "btn-success" :
+                        "btn-primary"}`
+                    }
                     onClick={() => sendMessage({
                       command: "tiltBy",
                       payload: "-5"
@@ -414,11 +486,15 @@ const WizardPage = () => {
             <div className="row mt-2">
               <div className="col-sm-6">
                 <button
+                    disabled={!canActivateCamera}
                     className="btn w-100 btn-primary"
-                    onClick={() => sendMessage({
-                      command: "navigateCamera",
-                      payload: ""
-                    })}>
+                    onClick={() => {
+                      sendMessage({
+                        command: "navigateCamera",
+                        payload: ""
+                      })
+                      setCanActivateCamera(false);
+                    }}>
                   {behaviorMode === 'proactive' ? "Activate Camera" : "Display Camera" }
                 </button>
               </div>
@@ -439,24 +515,29 @@ const WizardPage = () => {
               <div className="col-sm-4">
                 <button
                     className="btn w-100 btn-primary"
-                    disabled={isRecording}
-                    onClick={() => sendMessage({
-                      command: "takePicture",
-                      payload: ""
-                    })}>
+                    disabled={!canTakePicture}
+                    onClick={() => {
+                      sendMessage({
+                        command: "takePicture",
+                        payload: ""
+                      })
+                      setCanTakePicture(false)
+                      setCanStartVideo(false)
+                    }}>
                   Take Picture
                 </button>
               </div>
               <div className="col-sm-4">
                 <button
                     className="btn w-100 btn-primary"
-                    disabled={isRecording}
+                    disabled={!canStartVideo}
                     onClick={() => {
                       sendMessage({
                         command: "startVideo",
                         payload: ""
                       })
-                      setIsRecording(true);
+                      setCanTakePicture(false)
+                      setCanStartVideo(false)
                     }}>
                   Start Video
                 </button>
@@ -464,13 +545,14 @@ const WizardPage = () => {
               <div className="col-sm-4">
                 <button
                     className="btn w-100 btn-primary"
-                    disabled={!isRecording}
+                    disabled={!canStopVideo}
                     onClick={() => {
                       sendMessage({
                         command: "stopVideo",
                         payload: ""
                       })
-                      setIsRecording(false);
+                      setCanTakePicture(false)
+                      setCanStartVideo(false)
                     }}>
                   Stop Video
                 </button>

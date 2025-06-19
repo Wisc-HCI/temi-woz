@@ -398,7 +398,11 @@ const ParticipantSyncPage = () => {
                 <div className="row mt-2">
                   <div className="col-sm-3">
                     <button
-                        className="btn w-100 btn-primary"
+                        className={
+                          `btn w-100 ${pressedButtons.includes(3) ?
+                            "btn-success" :
+                            "btn-primary"}`
+                        }
                         onClick={() => sendMessage({
                           command: "tiltBy",
                           payload: "5"
@@ -408,7 +412,11 @@ const ParticipantSyncPage = () => {
                   </div>
                   <div className="col-sm-3">
                     <button
-                        className="btn w-100 btn-primary"
+                        className={
+                          `btn w-100 ${pressedButtons.includes(0) ?
+                            "btn-success" :
+                            "btn-primary"}`
+                        }
                         onClick={() => sendMessage({
                           command: "tiltBy",
                           payload: "-5"

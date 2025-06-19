@@ -1,5 +1,6 @@
 import os
 import shutil
+import time
 
 from fastapi import (
     FastAPI, WebSocket, WebSocketDisconnect,
@@ -9,6 +10,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import HTMLResponse, JSONResponse, Response
 from fastapi.staticfiles import StaticFiles
 from websocket_server import WebSocketServer, PATH_TEMI, PATH_CONTROL, PATH_PARTICIPANT
+from utils import get_zoom_jwt
 
 from dotenv import load_dotenv
 
@@ -66,7 +68,12 @@ def get_status():
 
 @app.get("/zoomJWT")
 def return_zoom_jwt():
-    return Response(content=ZOOM_JWT, media_type="text/plain")
+    token, exp = get_zoom_jwt()
+    # Check if expired (with buffer)
+    if time.time() > exp - 30 * 60:
+        get_cached_zoom_jwt.cache_clear()
+        token, _ = get_zoom_jwt()
+    return Response(content=token, media_type="text/plain")
 
 
 
@@ -102,6 +109,11 @@ async def upload_file(file: UploadFile = File(...)):
 
     with open(save_path, "wb") as f:
         shutil.copyfileobj(file.file, f)
+
+    await server.send_message(PATH_CONTROL, {
+        "type": "media_uploaded",
+        "data": "silent"
+    })
     return {
         "status": "success",
         "filename": file.filename,

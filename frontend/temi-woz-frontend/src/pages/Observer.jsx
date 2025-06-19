@@ -90,9 +90,6 @@ const ObserverPage = () => {
       'video': {
         enable: false
       },
-      'audio': {
-        enable: false
-      },
       'chat': {
         enable: false,
       },

@@ -269,7 +269,8 @@ class WebSocketServer:
             print(f"Received locations: {locations}")
             await self.send_message(PATH_CONTROL, msg_json)
 
-        elif msg_json['type'] == 'screenshot':
+        elif msg_json['type'] in [
+                'screenshot', 'snapshot', 'video_recording', 'camera']:
             await self.send_message(PATH_CONTROL, msg_json)
 
         elif msg_json['type'] == 'declined_share':
