@@ -21,6 +21,7 @@ export function connectWebSocket(onMessage, path) {
   socket.onerror = (err) => {
     console.error("WebSocket error:", err);
   };
+  return socket;
 }
 
 export function sendMessageWS(message) {
