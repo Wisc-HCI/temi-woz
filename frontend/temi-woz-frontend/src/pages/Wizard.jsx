@@ -1,9 +1,8 @@
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useState } from "react";
 import { connectWebSocket, sendMessageWS } from "../utils/ws";
 import MediaList from '../components/MediaList';
 import { useGamepadControls } from "../utils/useGamepadControls";
 import presetPhrases from "../utils/presetPhrases";
-
 
 const WizardPage = () => {
 
@@ -17,8 +16,6 @@ const WizardPage = () => {
   const [uploadNotification, setUploadNotification] = useState(null);
   const [latestUploadedFile, setLatestUploadedFile] = useState(null);
   const [displayedMedia, setDisplayedMedia] = useState(null);
-  const wsRef = useRef(null)
-
 
   const sendMessage = (message) => {
     sendMessageWS(message);
@@ -28,75 +25,42 @@ const WizardPage = () => {
       setDisplayedMedia(null);
     }
   };
-  const onWsMessage = (data) => {
-    console.log('onWsMessage')
-    console.log(data)
-    if (data.type === 'asr_result') {
-      setLog((prev) => [...prev, `Received: ${data.data}`]);
-    } else if (data.type === 'suggested_response') {
-      setInputText(data.data);
-    } else if (data.type === "initial_status") {
-      setBehaviorMode(data.data.behavior_mode);
-      setDisplayedMedia(data.data.last_displayed);
-    } else if (data.type === "behavior_mode") {
-      setBehaviorMode(data.data);
-    } else if (data.type === "media_uploaded") {
-      const msg = `✅ Media uploaded: ${data.filename}`;
-      setUploadNotification(msg);
-      setLatestUploadedFile(data.filename); 
-      setTimeout(() => setUploadNotification(null), 3000);
-    } else if (data.type === "saved_locations") {
-      const locationList = data.data;
-      setSavedLocations(locationList);
-    } else if (data.type === "screenshot") {
-      setScreenshotData(`data:image/jpeg;base64,${data.data}`);
-    }
-  };
-
 
   useEffect(() => {
-    console.log('trying')
-    const ws = connectWebSocket(onWsMessage, "control");
-    wsRef.current = ws;
-
-    ws.onopen = () => {
-      console.log("ws opened");
-
-      ws.send(JSON.stringify({
-        command: "identify",
-        payload: "wizard"
-      }));
-
-      setTimeout(() => {
-        ws.send(JSON.stringify({
-          command: "queryLocations"
-        }));
-      }, 100);
-    };
-
-    ws.onerror = (err) => {
-      console.error("web socket error:", err);
-    };
-
-    ws.onclose = () => {
-      console.log("WebSocket closed");
-    };
-
-    return () => ws.close(); // Cleanup
+    const onWsMessage = (data) => {
+      console.log('onWsMessage')
+      console.log(data)
+      if (data.type === 'asr_result') {
+        setLog((prev) => [...prev, `Received: ${data.data}`]);
+      } else if (data.type === 'suggested_response') {
+        setInputText(data.data);
+      } else if (data.type === "initial_status") {
+        setBehaviorMode(data.data.behavior_mode);
+        setDisplayedMedia(data.data.last_displayed);
+      } else if (data.type === "behavior_mode") {
+        setBehaviorMode(data.data);
+      } else if (data.type === "media_uploaded") {
+        const msg = `✅ Media uploaded: ${data.filename}`;
+        setUploadNotification(msg);
+        setLatestUploadedFile(data.filename); 
+        setTimeout(() => setUploadNotification(null), 3000);
+      } else if (data.type === "saved_locations") {
+        const locationList = data.data;
+        setSavedLocations(locationList);
+      } else if (data.type === "screenshot") {
+        setScreenshotData(
+          `data:image/jpeg;base64,${data.data}`
+        );
+      }
+    }
+    connectWebSocket(onWsMessage, "control");
   }, []);
 
   useGamepadControls(sendMessage, setPressedButtons);
 
-  function sendGoTo(locationName) {
-    if (wsRef.current?.readyState === WebSocket.OPEN) {
-      wsRef.current.send(JSON.stringify({
-        command: "goTo",
-        payload: locationName
-      }));
-    } else {
-      console.warn("WebSocket is not open");
-    }
-  }
+
+
+
 
   function chunkArray(arr, chunkSize) {
     return Array.from({ length: Math.ceil(arr.length / chunkSize) }, (_, i) =>
@@ -291,17 +255,7 @@ const WizardPage = () => {
 
 
             <h4 className="mt-2">Go To ...</h4>
-              <div className="flex flex-wrap gap-2">
-                {savedLocations.map((loc) => (
-                  <button
-                    key={loc}
-                    onClick={() => sendGoTo(loc)} // Send "goTo" command back
-                    className="px-3 py-1 bg-blue-600 text-white rounded hover:bg-blue-700"
-                  >
-                    {loc}
-                  </button>
-                ))}
-              </div>
+            {navButtonsBlock()}
 
             <h4 className="mt-2">Movements</h4>
             <div className="row mt-2">
