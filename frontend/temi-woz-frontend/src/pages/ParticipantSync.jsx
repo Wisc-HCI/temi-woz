@@ -12,7 +12,7 @@ import { fetchZoomToken, captureAndSend } from "../utils/utils";
 const ParticipantSyncPage = () => {
 
   const [showZoomUI, setShowZoomUI] = useState(false);
-  const [videoCallStatus, setVideoCallStatus] = useState("connected");
+  const [videoCallStatus, setVideoCallStatus] = useState(null);
   const [pressedButtons, setPressedButtons] = useState([]);
   const [notification, setNotification] = useState(null);
   const [showAdminButtons, setShowAdminButtons] = useState(true);
@@ -46,6 +46,8 @@ const ParticipantSyncPage = () => {
         } else if (data.data === 'answer') {
           setVideoCallStatus('connected');
           setTimeout(() => setShowZoomUI(true), 1000);
+          setNotification("Call connected. Remember to unmute yourself!")
+          setTimeout(() => setNotification(null), 4000);
         } else if (data.data === 'dismiss') {
           setVideoCallStatus(null);
           setNotification("Call was dismissed or timed out. Please try again later.")
@@ -56,6 +58,8 @@ const ParticipantSyncPage = () => {
         } else if ( data.data === 'connected') {
           setVideoCallStatus('connected');
           setTimeout(() => setShowZoomUI(true), 1000);
+          setNotification("Call connected. Remember to unmute yourself!")
+          setTimeout(() => setNotification(null), 4000);
         } else if ( data.data === "ending_alert") {
           setNotification("Call duration is approaching 3 minutes, and it will be terminated in 15 seconds.")
           setTimeout(() => setNotification(null), 3000);
@@ -168,6 +172,8 @@ const ParticipantSyncPage = () => {
         payload: "answer"
       })
       setTimeout(() => setShowZoomUI(true), 2000);
+      setNotification("Call connected. Remember to unmute yourself!")
+      setTimeout(() => setNotification(null), 4000);
     }
   }
 

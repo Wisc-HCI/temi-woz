@@ -20,6 +20,8 @@ PATH_CONTROL = '/control'
 PATH_PARTICIPANT = '/participant'
 LOG_FILE = 'participant_data/log.log'
 MESSAGES_FILE = 'participant_data/messages.json'
+UPLOAD_DIR = "participant_data/media"
+MEDIA_INDEX_FILE = os.path.join(UPLOAD_DIR, "display_list.txt")
 
 
 try:
@@ -163,8 +165,9 @@ class WebSocketServer:
             await self.send_message(PATH_TEMI, msg_json)
 
         elif msg_json['command'] == 'navigateCamera':
-            if self.behavior_mode == PROACTIVE:
-                msg_json['payload'] = 'headless'
+            # for this project: whenever its admin capturing,
+            #  we always do it headless
+            msg_json['payload'] = 'headless'
             await self.send_message(PATH_TEMI, msg_json)
 
         elif msg_json['command'] == 'startVideo':
@@ -281,6 +284,22 @@ class WebSocketServer:
 
         elif msg_json['type'] == 'declined_share':
             await self.send_message(PATH_PARTICIPANT, msg_json)
+
+        elif msg_json['type'] == 'share_media':
+            filename = msg_json['data']
+            with open(MEDIA_INDEX_FILE, "a") as f:
+                f.write(f"{filename}\n")
+
+            await self.send_message(PATH_CONTROL, {
+                "type": "media_uploaded",
+                "filename": filename,
+                "url": f"/view/{filename}"
+            })
+            await self.send_message(PATH_PARTICIPANT, {
+                "type": "media_uploaded",
+                "filename": filename,
+                "url": f"/view/{filename}"
+            })
 
         elif msg_json['type'] == 'video_call':
             action = msg_json.get("data")

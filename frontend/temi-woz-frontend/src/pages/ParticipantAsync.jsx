@@ -13,7 +13,7 @@ const ParticipantAsyncPage = () => {
   const [behaviorMode, setBehaviorMode] = useState(null);
   const [latestUploadedFile, setLatestUploadedFile] = useState(null);
   const [canRequest, setCanRequest] = useState(true);
-  const [requestDeclined, setRequestDeclined] = useState(true);
+  const [requestDeclined, setRequestDeclined] = useState(false);
 
   const playChimes = () => {
     const audio = new Audio('/audio/chime.mp3');

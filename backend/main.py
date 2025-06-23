@@ -77,27 +77,27 @@ def return_zoom_jwt():
 
 
 
-@app.post("/add-media-to-display")
-async def add_media(request: Request):
-    print(request)
-    data = await request.json()
-    filename = data.get("filename", "").strip()
-    log_event('received', '/add-media-to-display', filename)
-    # Append filename
-    with open(MEDIA_INDEX_FILE, "a") as f:
-        f.write(f"{filename}\n")
+# @app.post("/add-media-to-display")
+# async def add_media(request: Request):
+#     print(request)
+#     data = await request.json()
+#     filename = data.get("filename", "").strip()
+#     log_event('received', '/add-media-to-display', filename)
+#     # Append filename
+#     with open(MEDIA_INDEX_FILE, "a") as f:
+#         f.write(f"{filename}\n")
 
-    await server.send_message(PATH_CONTROL, {
-        "type": "media_uploaded",
-        "filename": filename,
-        "url": f"/view/{filename}"
-    })
-    await server.send_message(PATH_PARTICIPANT, {
-        "type": "media_uploaded",
-        "filename": filename,
-        "url": f"/view/{filename}"
-    })
-    return JSONResponse(content={"message": "Added successfully"})
+#     await server.send_message(PATH_CONTROL, {
+#         "type": "media_uploaded",
+#         "filename": filename,
+#         "url": f"/view/{filename}"
+#     })
+#     await server.send_message(PATH_PARTICIPANT, {
+#         "type": "media_uploaded",
+#         "filename": filename,
+#         "url": f"/view/{filename}"
+#     })
+#     return JSONResponse(content={"message": "Added successfully"})
 
 
 

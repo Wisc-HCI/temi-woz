@@ -519,7 +519,8 @@ const WizardPage = () => {
                       })
                       setCanActivateCamera(false);
                     }}>
-                  {behaviorMode === 'proactive' ? "Activate Camera" : "Display Camera" }
+                    {/*behaviorMode === 'proactive' ? "Activate Camera" : "Display Camera"*/}
+                    Activate Camera
                 </button>
               </div>
               <div className="col-sm-6">
@@ -575,6 +576,12 @@ const WizardPage = () => {
                         command: "stopVideo",
                         payload: ""
                       })
+                      setTimeout(() => {
+                        sendMessage({
+                          command: "speak",
+                          payload: "I just captured a video clip! Review and share with your family if you want."
+                        })
+                      }, 4000);
                       setCanTakePicture(false)
                       setCanStartVideo(false)
                     }}>
