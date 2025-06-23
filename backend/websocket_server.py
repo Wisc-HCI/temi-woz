@@ -7,6 +7,7 @@ from websockets.asyncio.server import serve
 from fastapi import WebSocketDisconnect
 import signal
 from llm_model import generate_response
+from utils import log_event
 
 
 load_dotenv()
@@ -27,10 +28,6 @@ try:
 except Exception as e:
     print('[ERROR] No messages file. Set to empty')
     MESSAGES = []
-
-
-def log_event(event):
-    pass
 
 
 
@@ -77,6 +74,7 @@ class WebSocketServer:
             while True:
                 message = await websocket.receive_text()
                 print(message[:100])
+                log_event('received', ws_path, message[:100])
                 if message == '':
                     pass
                 if ws_path == PATH_TEMI:
@@ -98,6 +96,7 @@ class WebSocketServer:
     async def send_message(self, group, message):
         # we really just expect one to be in the set
         print(f'Sending message to {group}: {str(message)[:100]}')
+        log_event('sent', group, str(message)[:100])
         for connection in self.connections[group]:
             await connection.send_json(message)
             # try:
@@ -216,6 +215,13 @@ class WebSocketServer:
                 }
                 await self.send_message(PATH_TEMI, msg_json)
                 await self.send_message(PATH_PARTICIPANT, participant_msg)
+            elif action == "ending_alert":
+                participant_msg = {
+                    'type': 'video_call',
+                    'data': 'ending_alert'
+                }
+                await self.send_message(PATH_TEMI, msg_json)
+                await self.send_message(PATH_PARTICIPANT, participant_msg)
 
         elif msg_json['command'] == 'identify':
             if msg_json.get('payload') == 'webpage':
@@ -330,7 +336,7 @@ class WebSocketServer:
                 'stopMovement', 'turnBy']:
             await self.send_message(PATH_TEMI, msg_json)
 
-        if msg_json['command'] == 'video_call':
+        elif msg_json['command'] == 'video_call':
             if msg_json['payload'] == 'answer':
                 if self.behavior_mode == PROACTIVE:
                     if self.zoom_status_robot == 'ringing':
@@ -367,12 +373,26 @@ class WebSocketServer:
                 self.zoom_status_participant = None
                 call_duration = time.time() - self.zoom_status_call_start
                 print(f'Call ended. Lasted {call_duration} seconds.')
+                laptop_msg = {
+                    'type': 'video_call',
+                    'data': 'end'
+                }
+                await self.send_message(PATH_TEMI, msg_json)
+                await self.send_message(PATH_CONTROL, laptop_msg)
+                return
             await self.send_message(PATH_TEMI, msg_json)
             await self.send_message(PATH_CONTROL, msg_json)
 
         elif msg_json['command'] == 'screenshot':
             msg = {
                 'type': 'screenshot',
+                'data': msg_json['payload']
+            }
+            await self.send_message(PATH_CONTROL, msg)
+
+        elif msg_json['command'] == 'initiate_capture':
+            msg = {
+                'type': 'initiate_capture',
                 'data': msg_json['payload']
             }
             await self.send_message(PATH_CONTROL, msg)

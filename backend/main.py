@@ -10,7 +10,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import HTMLResponse, JSONResponse, Response
 from fastapi.staticfiles import StaticFiles
 from websocket_server import WebSocketServer, PATH_TEMI, PATH_CONTROL, PATH_PARTICIPANT
-from utils import get_zoom_jwt
+from utils import get_zoom_jwt, log_event
 
 from dotenv import load_dotenv
 
@@ -82,6 +82,7 @@ async def add_media(request: Request):
     print(request)
     data = await request.json()
     filename = data.get("filename", "").strip()
+    log_event('received', '/add-media-to-display', filename)
     # Append filename
     with open(MEDIA_INDEX_FILE, "a") as f:
         f.write(f"{filename}\n")
@@ -106,6 +107,7 @@ async def upload_file(file: UploadFile = File(...)):
     Aside from storing it, also announces it to users
     '''
     save_path = os.path.join(UPLOAD_DIR, file.filename)
+    log_event('received', '/upload', file.filename)
 
     with open(save_path, "wb") as f:
         shutil.copyfileobj(file.file, f)

@@ -54,7 +54,7 @@ export default function MediaList({ sendMessage, newMediaFile, displayedMedia })
       >
         {files.length === 0 &&
           <div className="p-3">
-            <h4>No media available yet.</h4>
+            <h4>No media available yet. You will be notified when robot sends you new video clips!</h4>
           </div>
         }
         {files.length > 0 &&

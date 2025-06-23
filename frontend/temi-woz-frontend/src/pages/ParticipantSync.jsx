@@ -12,7 +12,7 @@ import { fetchZoomToken, captureAndSend } from "../utils/utils";
 const ParticipantSyncPage = () => {
 
   const [showZoomUI, setShowZoomUI] = useState(false);
-  const [videoCallStatus, setVideoCallStatus] = useState(null);
+  const [videoCallStatus, setVideoCallStatus] = useState("connected");
   const [pressedButtons, setPressedButtons] = useState([]);
   const [notification, setNotification] = useState(null);
   const [showAdminButtons, setShowAdminButtons] = useState(true);
@@ -56,6 +56,9 @@ const ParticipantSyncPage = () => {
         } else if ( data.data === 'connected') {
           setVideoCallStatus('connected');
           setTimeout(() => setShowZoomUI(true), 1000);
+        } else if ( data.data === "ending_alert") {
+          setNotification("Call duration is approaching 3 minutes, and it will be terminated in 15 seconds.")
+          setTimeout(() => setNotification(null), 3000);
         }
       } else if (data.command === "displayMode") {
         if (data.payload === 'admin') {
@@ -107,7 +110,7 @@ const ParticipantSyncPage = () => {
   var config = {
     videoSDKJWT: null,
     sessionName: "research-study",
-    userName: "Laptop",
+    userName: "Tablet",
     featuresOptions: {
       'feedback': {
         enable: false
@@ -135,7 +138,7 @@ const ParticipantSyncPage = () => {
   const startVideoCall = async () => {
     setShowZoomUI(true)
     const sessionContainer = document.getElementById('sessionContainer');
-    var token = await fetchZoomToken(import.meta.env.VITE_SERVER_IP);
+    var token = await fetchZoomToken();
     if (token === null) {
       token = import.meta.env.VITE_ZOOM_JWT
     }
@@ -178,10 +181,7 @@ const ParticipantSyncPage = () => {
   }
 
   const showCallButton = () => {
-    return (
-      behaviorMode === 'reactive' && 
-      (videoCallStatus === null || videoCallStatus === 'calling')
-      )
+    return behaviorMode === 'reactive' && videoCallStatus === null
   }
 
   return (
@@ -192,7 +192,7 @@ const ParticipantSyncPage = () => {
 
       {notification && (
         <div
-          className="alert alert-warning position-fixed bottom-0 start-50 translate-middle-x mb-3 shadow"
+          className="alert alert-warning position-fixed bottom-50 start-50 translate-middle-x mb-3 shadow"
           role="alert"
           style={{ zIndex: 1050 }}
         >
@@ -212,242 +212,317 @@ const ParticipantSyncPage = () => {
           </button>
         }
 
-        {videoCallStatus === 'ringing' &&
-          <>
-            <div className="row">
-              <div className="col-md-10 offset-md-1">
-                <h1>Incomging call!</h1>
-              </div>
-            </div>
-            <div className="row">
-              <div className="col-md-6">
-                <button
-                  onClick={() => {answerBtnOnClick()}}
-                  className="btn btn-primary">
-                  Answer Call
-                </button>
-              </div>
-              <div className="col-md-6">
-                <button
-                  onClick={() => {dismissBtnOnClick()}}
-                  className="btn btn-primary">
-                  Dismiss
-                </button>
-              </div>
-            </div>
-          </>
-        }
 
-        {videoCallStatus === 'waiting' &&
-          <div className="row">
-            <div className="col-md-10 offset-md-1 alert alert-warning">
-              <h1>Waiting for other user to answer the call ...</h1>
-            </div>
-          </div>
-        }
-
-        {showCallButton() &&
-          <>
-            {/*<div className="row">
-              <div className="col-md-10 offset-md-1">
-                <h1>Incomging call!</h1>
-              </div>
-            </div>*/}
-            <div className="row mt-3">
-              <div className="col-md-6">
-                <button
-                  disabled={videoCallStatus === "calling"}
-                  onClick={() => {
-                    setVideoCallStatus('calling');
-                    sendMessage({
-                      command: "video_call",
-                      payload: "start"
-                    })
-                    // setTimeout(() => setShowZoomUI(true), 2000);
-                  }}
-                  className="btn btn-primary">
-                  {videoCallStatus === null ? "Call Robot" : "Calling ..."}
-                </button>
-              </div>
-              {/*<div className="col-md-6">
-                <button
-                  onClick={() => {
-                    setShowZoomUI(true);
-                  }}
-                  className="btn btn-primary">
-                  Dismiss
-                </button>
-              </div>*/}
-            </div>
-          </>
-        }
-
-        
-          <div
+        <div
             style={{
-              display: showZoomUI ? 'block' : 'none'
-            }}>
-            <div className="row">
-              {/* Video Panel */}
-              <div className="col-md-12">
-                <h4>Video Panel</h4>
-                <div
-                  id="sessionContainer"
-                  style={{
-                    height: '70vh',
-                  }}
-                ></div>
-                  {showAdminButtons &&
+              display: showZoomUI ? 'none' : 'block'
+            }}
+            className="row">
+          <div
+            className="col-12 w-100 text-center mt-5"
+            style={{ minHeight: "160px", minWidth: "200px" }}
+          >
+
+            {videoCallStatus === 'ringing' &&
+              <>
+                <div className="row">
+                  <div className="col-md-10 offset-md-1">
+                    <h1 className="display-5">You have an incomging call!</h1>
+                  </div>
+                </div>
+                <div className="row mt-5">
+                  <div className="col-md-3 offset-md-3">
                     <button
-                      onClick={() => {
-                        setShowZoomUI(false);
-                      }}
-                      className="btn btn-primary">
-                    Hide
-                  </button>
-                }
-              </div>
-            </div>
+                      onClick={() => {answerBtnOnClick()}}
+                      className="btn btn-success w-100">
+                      Answer Call
+                    </button>
+                  </div>
+                  <div className="col-md-3">
+                    <button
+                      onClick={() => {dismissBtnOnClick()}}
+                      className="btn btn-danger w-100">
+                      Dismiss
+                    </button>
+                  </div>
+                </div>
+              </>
+            }
 
-
-            {videoCallStatus === "connected" &&
-              <div className="row mt-3">
-                <div className="col-md-6">
-                  <button
-                    onClick={() => {
-                      sendMessage({
-                        command: "video_call",
-                        payload: "end"
-                      })
-                      setTimeout(() => {
-                        setShowZoomUI(false);
-                        setVideoCallStatus(null);
-                      }, 500);
-                    }}
-                    className="btn btn-primary">
-                    End Call
-                  </button>
+            {videoCallStatus === 'waiting' &&
+              <div className="row">
+                <div className="col-md-10 offset-md-1 alert alert-warning">
+                  <h1>Waiting for the other user to answer the call ...</h1>
                 </div>
               </div>
             }
 
+            {videoCallStatus === null &&
+              <h1 className="display-5">No on-going video call</h1>
+            }
 
-            <div className="row">
-              <div className="col-md-12">
+            {videoCallStatus === "calling" &&
+              <div 
+                className="alert alert-warning py-4"
+                style={{fontSize: "1.6rem"}}>Calling robot. Waiting for the other user to answer.
+              </div>
+            }
 
-                <h4 className="mt-2">Movements</h4>
-                <div className="row mt-2">
-                  <div className="col-sm-3">
+            {showCallButton() &&
+              <>
+                <div className="row mt-3">
+                  <div className="col-md-4 offset-md-4">
                     <button
-                        className={
-                          `btn w-100 ${pressedButtons.includes(14) ?
-                            "btn-success" :
-                            "btn-primary"}`
-                        }
-                        onClick={() => sendMessage({
-                          command: "turnBy",
-                          payload: "10"
-                        })}>
-                      Left
-                    </button>
-                  </div>
-                  <div className="col-sm-3">
-                    <button
-                        className={
-                          `btn w-100 ${pressedButtons.includes(15) ?
-                            "btn-success" :
-                            "btn-primary"}`
-                        }
-                        onClick={() => sendMessage({
-                          command: "turnBy",
-                          payload: "-10"
-                        })}>
-                      Right
-                    </button>
-                  </div>
-                  <div className="col-sm-3">
-                    <button
-                        className={
-                          `btn w-100 ${pressedButtons.includes(12) ?
-                            "btn-success" :
-                            "btn-primary"}`
-                        }
-                        onClick={() => sendMessage({
-                          command: "skidJoy",
-                          payload: "(0.5, 0)"
-                        })}>
-                      Forward
-                    </button>
-                  </div>
-                  <div className="col-sm-3">
-                    <button
-                        className={
-                          `btn w-100 ${pressedButtons.includes(13) ?
-                            "btn-success" :
-                            "btn-primary"}`
-                        }
-                        onClick={() => sendMessage({
-                          command: "skidJoy",
-                          payload: "(-0.5, 0)"
-                        })}>
-                      Back
+                      onClick={() => {
+                        setVideoCallStatus('calling');
+                        sendMessage({
+                          command: "video_call",
+                          payload: "start"
+                        })
+                        // setTimeout(() => setShowZoomUI(true), 2000);
+                      }}
+                      className="btn btn-primary w-100 mt-4">
+                      <span style={{fontSize: "1.6rem"}}>
+                        Call Robot
+                      </span>
                     </button>
                   </div>
                 </div>
+              </>
+            }
 
-                <div className="row mt-2">
-                  <div className="col-sm-3">
-                    <button
-                        className={
-                          `btn w-100 ${pressedButtons.includes(3) ?
-                            "btn-success" :
-                            "btn-primary"}`
+          </div>
+        </div>
+
+
+        
+        <div
+          style={{
+            display: showZoomUI ? 'block' : 'none'
+          }}>
+          <div className="row">
+            {/* Video Panel */}
+            <div className="col-md-8">
+              <div
+                id="sessionContainer"
+                style={{
+                  height: '70vh',
+                }}
+              ></div>
+                {showAdminButtons &&
+                  <button
+                    onClick={() => {
+                      setShowZoomUI(false);
+                    }}
+                    className="btn btn-primary">
+                  Hide
+                </button>
+              }
+            </div>
+
+            <div className="col-md-4">
+
+              <div className="row">
+                <h4 className="my-2">Movements</h4>
+                  <div className="d-flex flex-column align-items-center">
+
+                    {/* Up */}
+                    <div className="mb-2">
+                      <button
+                        className={`dpad-btn btn ${pressedButtons.includes(12) ? "btn-success" : "btn-primary"}`}
+                        onClick={() =>
+                          sendMessage({ command: "skidJoy", payload: "(0.5, 0)" })
                         }
-                        onClick={() => sendMessage({
-                          command: "tiltBy",
-                          payload: "5"
-                        })}>
-                      Up
-                    </button>
-                  </div>
-                  <div className="col-sm-3">
-                    <button
-                        className={
-                          `btn w-100 ${pressedButtons.includes(0) ?
-                            "btn-success" :
-                            "btn-primary"}`
+                      >
+                        ↑
+                      </button>
+                    </div>
+
+                    {/* Left, Right */}
+                    <div className="d-flex justify-content-between mb-2" style={{ width: "180px" }}>
+                      <button
+                        className={`dpad-btn btn ${pressedButtons.includes(14) ? "btn-success" : "btn-primary"}`}
+                        onClick={() =>
+                          sendMessage({ command: "turnBy", payload: "10" })
                         }
-                        onClick={() => sendMessage({
-                          command: "tiltBy",
-                          payload: "-5"
-                        })}>
-                      Down
-                    </button>
+                      >
+                        ←
+                      </button>
+
+                      <button
+                        className={`dpad-btn btn ${pressedButtons.includes(15) ? "btn-success" : "btn-primary"}`}
+                        onClick={() =>
+                          sendMessage({ command: "turnBy", payload: "-10" })
+                        }
+                      >
+                        →
+                      </button>
+                    </div>
+
+                    {/* Down */}
+                    <div>
+                      <button
+                        className={`dpad-btn btn ${pressedButtons.includes(13) ? "btn-success" : "btn-primary"}`}
+                        onClick={() =>
+                          sendMessage({ command: "skidJoy", payload: "(-0.5, 0)" })
+                        }
+                      >
+                        ↓
+                      </button>
+                    </div>
                   </div>
-                  <div className="col-sm-3">
+                  <div className="mt-3">
                     <button
-                        className="btn w-100 btn-primary"
-                        onClick={() => sendMessage({
-                          command: "tiltAngle",
-                          payload: "0"
-                        })}>
-                      👀 ahead
-                    </button>
-                  </div>
-                  <div className="col-sm-3">
-                    <button
-                        className="btn w-100 btn-danger"
+                        className="btn w-100 btn-warning"
                         onClick={() => sendMessage({
                           command: "stopMovement",
                           payload: ""
                         })}>
-                      STOP
+                      STOP Movement
                     </button>
                   </div>
-                </div>  
+
               </div>
+
+              {/*<div className="row">
+                <h4 className="my-2">Movements</h4>
+                <div className="col-sm-3">
+                  <button
+                      className={
+                        `btn w-100 ${pressedButtons.includes(14) ?
+                          "btn-success" :
+                          "btn-primary"}`
+                      }
+                      onClick={() => sendMessage({
+                        command: "turnBy",
+                        payload: "10"
+                      })}>
+                    Left
+                  </button>
+                </div>
+                <div className="col-sm-3">
+                  <button
+                      className={
+                        `btn w-100 ${pressedButtons.includes(15) ?
+                          "btn-success" :
+                          "btn-primary"}`
+                      }
+                      onClick={() => sendMessage({
+                        command: "turnBy",
+                        payload: "-10"
+                      })}>
+                    Right
+                  </button>
+                </div>
+                <div className="col-sm-3">
+                  <button
+                      className={
+                        `btn w-100 ${pressedButtons.includes(12) ?
+                          "btn-success" :
+                          "btn-primary"}`
+                      }
+                      onClick={() => sendMessage({
+                        command: "skidJoy",
+                        payload: "(0.5, 0)"
+                      })}>
+                    Forward
+                  </button>
+                </div>
+                <div className="col-sm-3">
+                  <button
+                      className={
+                        `btn w-100 ${pressedButtons.includes(13) ?
+                          "btn-success" :
+                          "btn-primary"}`
+                      }
+                      onClick={() => sendMessage({
+                        command: "skidJoy",
+                        payload: "(-0.5, 0)"
+                      })}>
+                    Back
+                  </button>
+                </div>
+              </div>*/}
+
+              <div className="row mt-2">
+                <h4 className="my-2">Head Tilt</h4>
+                <div className="col-sm-3">
+                  <button
+                      className={
+                        `btn w-100 ${pressedButtons.includes(3) ?
+                          "btn-success" :
+                          "btn-primary"}`
+                      }
+                      onClick={() => sendMessage({
+                        command: "tiltBy",
+                        payload: "5"
+                      })}>
+                    Up
+                  </button>
+                </div>
+                <div className="col-sm-3">
+                  <button
+                      className={
+                        `btn w-100 ${pressedButtons.includes(0) ?
+                          "btn-success" :
+                          "btn-primary"}`
+                      }
+                      onClick={() => sendMessage({
+                        command: "tiltBy",
+                        payload: "-5"
+                      })}>
+                    Down
+                  </button>
+                </div>
+                <div className="col-sm-6">
+                  <button
+                      className="btn w-100 btn-primary"
+                      onClick={() => sendMessage({
+                        command: "tiltAngle",
+                        payload: "0"
+                      })}>
+                    Look Ahead
+                  </button>
+                </div>
+                {/*<div className="col-sm-3">
+                  <button
+                      className="btn w-100 btn-danger"
+                      onClick={() => sendMessage({
+                        command: "stopMovement",
+                        payload: ""
+                      })}>
+                    STOP
+                  </button>
+                </div>*/}
+              </div>
+
+
+              <div className="row mt-5">
+                {videoCallStatus === "connected" &&
+                  <div className="col-12">
+                    <button
+                      onClick={() => {
+                        sendMessage({
+                          command: "video_call",
+                          payload: "end"
+                        })
+                        setTimeout(() => {
+                          setShowZoomUI(false);
+                          setVideoCallStatus(null);
+                        }, 500);
+                      }}
+                      className="btn btn-danger w-100">
+                      End Call
+                    </button>
+                  </div>
+                }
+              </div>
+
             </div>
+
           </div>
+        </div>
+
 
 
       </div>

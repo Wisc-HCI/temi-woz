@@ -13,6 +13,7 @@ const ParticipantAsyncPage = () => {
   const [behaviorMode, setBehaviorMode] = useState(null);
   const [latestUploadedFile, setLatestUploadedFile] = useState(null);
   const [canRequest, setCanRequest] = useState(true);
+  const [requestDeclined, setRequestDeclined] = useState(true);
 
   const playChimes = () => {
     const audio = new Audio('/audio/chime.mp3');
@@ -44,14 +45,16 @@ const ParticipantAsyncPage = () => {
         setNotification(msg);
         setLatestUploadedFile(data.filename); 
         setCanRequest(true);
+        setRequestDeclined(false);
         setTimeout(() => setNotification(null), 4000);
         playChimes();
       } else if (data.type === "declined_share") {
-        setNotificationType('warning');
-        setNotification('Family member declined to share the latest capture.')
-        setCanRequest(true);
-        setTimeout(() => setNotification(null), 4000);
-        playChimes();
+        // only trigger it if the capture was triggered by the tablet
+        if (canRequest === false) {
+          setCanRequest(true);
+          setRequestDeclined(true);
+          playChimes();
+        }
       } else if (data.type === "initial_status") {
         setBehaviorMode(data.data.behavior_mode);
       } else if (data.type === "behavior_mode") {
@@ -124,7 +127,7 @@ const ParticipantAsyncPage = () => {
         {behaviorMode === 'reactive' &&
           <>
             <div className="row mt-4">
-              <div className="col-md-4 mt-1">
+  {/*            <div className="col-md-4 mt-1">
                 <button
                     className="btn w-100 btn-primary"
                     disabled={!canRequest}
@@ -137,19 +140,20 @@ const ParticipantAsyncPage = () => {
                     }}>
                   Request New Picture
                 </button>
-              </div>
+              </div>*/}
               <div className="col-md-4 mt-1">
                 <button
-                    className="btn w-100 btn-primary"
+                    className="btn w-100 btn-primary py-4"
                     disabled={!canRequest}
                     onClick={() => {
                       setCanRequest(false);
+                      setRequestDeclined(false);
                       sendMessage({
-                        command: "initiateCapture",
+                        command: "initiate_capture",
                         payload: "video"
                       })
                     }}>
-                  Request New Video
+                  Send the robot to take a video clip
                 </button>
               </div>
             </div>
@@ -158,11 +162,30 @@ const ParticipantAsyncPage = () => {
               <div className="row my-2">
                 <div className="col-md-8">
                   <div
-                    className="alert alert-warning"
+                    className="alert alert-success"
                     role="alert"
                   >
-                    Robot executing previous request ...
+                    The robot is on its way to take a video. You will be notified when the video is ready!
                   </div>
+                </div>
+              </div>
+            }
+            {requestDeclined &&
+              <div className="row my-4">
+                <div className="col-md-8">
+                  <div
+                    className="alert alert-warning mb-1"
+                    role="alert"
+                  >
+                    Family member didn't want to share the latest video clip captured.
+                  </div>
+                  <button
+                    className="btn btn-primary"
+                    onClick={() => {
+                      setRequestDeclined(false);
+                    }}>
+                    Okay
+                  </button>
                 </div>
               </div>
             }

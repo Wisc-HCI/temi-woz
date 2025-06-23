@@ -11,6 +11,7 @@ load_dotenv()
 ZOOM_SDK_KEY = os.environ.get("ZOOM_SDK_KEY")
 ZOOM_SDK_SECRET = os.environ.get("ZOOM_SDK_SECRET")
 ZOOM_SESSION_NAME = os.environ.get("ZOOM_SESSION_NAME")
+LOG_FILE = "participant_data/log.log"
 
 
 @lru_cache(maxsize=1)
@@ -37,3 +38,21 @@ def get_zoom_jwt():
     print("Zoom Video SDK JWT:")
     print(token)
     return token, exp
+
+
+def log_event(direction: str, path: str, data: str):
+    # skip these:
+    if (direction == 'received' and
+        path == '/control' and
+        'zoom_status' in data):
+        return
+
+    if (direction == 'sent' and
+        path == '/control' and
+        'zoom_status' in data and
+        "'call_duration': None" in data):
+        return
+
+    timestamp = time.strftime("%Y-%m-%d %H:%M:%S")
+    with open(LOG_FILE, 'a') as f:
+        f.write(f"[{timestamp}][{direction}][{path}] {data}\n")

@@ -1,8 +1,14 @@
 import html2canvas from 'html2canvas';
 
-export async function fetchZoomToken(serverIP) {
+export const getBackendUrl = () => {
+  const { protocol, hostname } = window.location;
+  return `${protocol}//${hostname}:8000`;
+};
+
+
+export async function fetchZoomToken() {
   try {
-    const response = await fetch(`http://${serverIP}/zoomJWT`);
+    const response = await fetch(`${getBackendUrl()}/zoomJWT`);
     if (!response.ok) {
       console.error("Failed to fetch Zoom JWT:", response.statusText);
       return null;
@@ -15,12 +21,6 @@ export async function fetchZoomToken(serverIP) {
     return null;
   }
 }
-
-
-export const getBackendUrl = () => {
-  const { protocol, hostname } = window.location;
-  return `${protocol}//${hostname}:8000`;
-};
 
 
 export const captureAndSend = async ( sendMessage ) => {

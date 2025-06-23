@@ -18,6 +18,8 @@ const WizardPage = () => {
   const [savedLocations, setSavedLocations] = useState([]);
   const [behaviorMode, setBehaviorMode] = useState(null);
   const [uploadNotification, setUploadNotification] = useState(null);
+  const [notification, setNotification] = useState(null);
+  const [notificationType, setNotificationType] = useState("warning");
   const [latestUploadedFile, setLatestUploadedFile] = useState(null);
   const [displayedMedia, setDisplayedMedia] = useState(null);
   const [modalData, setModalData] = useState(null);
@@ -98,6 +100,8 @@ const WizardPage = () => {
           setCanTakePicture(true);
           setCanStartVideo(true);
         }
+      } else if (data.type == "initiate_capture") {
+        setNotification(`You're up! Tablet requested a ${data.data} from the robot. Go do it!`)
       }
     }
     connectWebSocket(onWsMessage, "control");
@@ -180,6 +184,26 @@ const WizardPage = () => {
           style={{ zIndex: 1050 }}
         >
           {uploadNotification}
+        </div>
+      )}
+
+      {notification && (
+        <div
+            className={`position-fixed bottom-50 start-50 translate-middle-x
+              shadow align-items-center text-center
+              alert alert-success alert alert-${notificationType}`}
+            style={{
+              zIndex: 1050, minWidth: "200px", minHeight: "120px"
+            }}
+          >
+          <div className="my-3">
+            {notification}
+          </div>
+          <button
+              className="btn btn-secondary mt-3"
+              onClick={() => setNotification(null)}>
+            Got it!
+          </button>
         </div>
       )}
 
@@ -512,7 +536,7 @@ const WizardPage = () => {
             </div>
 
             <div className="row mt-2">
-              <div className="col-sm-4">
+{/*              <div className="col-sm-4">
                 <button
                     className="btn w-100 btn-primary"
                     disabled={!canTakePicture}
@@ -526,7 +550,7 @@ const WizardPage = () => {
                     }}>
                   Take Picture
                 </button>
-              </div>
+              </div>*/}
               <div className="col-sm-4">
                 <button
                     className="btn w-100 btn-primary"
