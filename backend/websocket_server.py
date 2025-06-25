@@ -285,6 +285,9 @@ class WebSocketServer:
         elif msg_json['type'] == 'declined_share':
             await self.send_message(PATH_PARTICIPANT, msg_json)
 
+        elif msg_json['type'] == 'video_capture':
+            await self.send_message(PATH_PARTICIPANT, msg_json)
+
         elif msg_json['type'] == 'share_media':
             filename = msg_json['data']
             with open(MEDIA_INDEX_FILE, "a") as f:
@@ -410,11 +413,19 @@ class WebSocketServer:
             await self.send_message(PATH_CONTROL, msg)
 
         elif msg_json['command'] == 'initiate_capture':
-            msg = {
+            web_msg = {
                 'type': 'initiate_capture',
                 'data': msg_json['payload']
             }
-            await self.send_message(PATH_CONTROL, msg)
+            await self.send_message(PATH_CONTROL, web_msg)
+            # robot msg
+            # for this project: whenever its admin capturing,
+            # we always do it headless
+            robot_msg = {
+                'command': 'navigateCamera',
+                'payload': 'headless'
+            }
+            await self.send_message(PATH_TEMI, robot_msg)
 
         elif msg_json['command'] == 'identify':
             if msg_json.get('payload') == 'webpage':

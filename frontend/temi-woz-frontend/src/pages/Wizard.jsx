@@ -27,6 +27,9 @@ const WizardPage = () => {
   const [canTakePicture, setCanTakePicture] = useState(false);
   const [canStartVideo, setCanStartVideo] = useState(false);
   const [canStopVideo, setCanStopVideo] = useState(false);
+  const [startTime, setStartTime] = useState(null); // timestamp in ms
+  const [now, setNow] = useState(null);
+  const [timerActive, setTimerActive] = useState(false);
 
   const sendMessage = (message) => {
     sendMessageWS(message);
@@ -101,13 +104,26 @@ const WizardPage = () => {
           setCanStartVideo(true);
         }
       } else if (data.type == "initiate_capture") {
-        setNotification(`You're up! Tablet requested a ${data.data} from the robot. Go do it!`)
+        // TODO: TEST flow --> tablet initiate a request, and robot should activate camera immediately
+        setCanActivateCamera(false);
+        setNotification(`You're up! Tablet requested a ${data.data} from the robot. Go do it! Camera is activated for you already!`)
       }
     }
     connectWebSocket(onWsMessage, "control");
   }, []);
 
   useGamepadControls(sendMessage, setPressedButtons);
+
+  useEffect(() => {
+    if (!timerActive) return;
+
+    const interval = setInterval(() => {
+      setNow(Date.now());
+    }, 2000);
+
+    return () => clearInterval(interval);
+  }, [timerActive]);
+
 
 
 
@@ -170,11 +186,69 @@ const WizardPage = () => {
     }
   }
 
+  const getCounterDiv = () => {
+
+    const elapsed = startTime && now ? Math.floor((now - startTime) / 1000) : 0;
+    const formattedTime = new Date(elapsed * 1000).toISOString().substr(11, 8);
+
+    return (
+      <div className="d-flex align-items-center text-white">
+        <span className="fw-bold mr-3">
+          {formattedTime}
+        </span>
+        <button
+          className="btn btn-sm btn-success me-2"
+          onClick={() => {
+            if (!startTime) setStartTime(Date.now());
+            setNow(Date.now());
+            setTimerActive(true);
+          }}
+          disabled={timerActive}
+        >
+          Start
+        </button>
+        <button
+          className="btn btn-sm btn-warning me-2"
+          onClick={() => setTimerActive(false)}
+          disabled={!timerActive}
+        >
+          Pause
+        </button>
+        <button
+          className="btn btn-sm btn-danger me-2"
+          onClick={() => {
+            setTimerActive(false);
+            setStartTime(null);
+            setNow(null);
+          }}
+        >
+          Reset
+        </button>
+        <input
+          type="number"
+          min="0"
+          placeholder="Start at"
+          className="form-control form-control-sm me-2"
+          style={{ width: "80px" }}
+          onChange={(e) => {
+            const offset = parseInt(e.target.value, 10) || 0;
+            setStartTime(Date.now() - offset * 1000);
+            setNow(Date.now());
+          }}
+          disabled={timerActive}
+        />
+      </div>
+    )
+  }
+
   
   return (
     <div className="container-fluid p-0">
       <nav className="navbar navbar-dark bg-dark fixed-top">
         <span className="navbar-brand mb-0 h1">🤖 Wizard Control Dashboard</span>
+
+        {getCounterDiv()}
+
       </nav>
 
       {uploadNotification && (

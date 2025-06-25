@@ -18,5 +18,5 @@ rootCA-key.pem
 ```
 
 ```
-uvicorn main:app --host 0.0.0.0 --port 8000 --ssl-certfile C:\Users\xurub\.vite-plugin-mkcert/cert.pem --ssl-keyfile C:\Users\xurub\.vite-plugin-mkcert/dev.pem
+uvicorn main:app --reload --host 0.0.0.0 --port 8000 --ssl-certfile C:\Users\xurub\.vite-plugin-mkcert/cert.pem --ssl-keyfile C:\Users\xurub\.vite-plugin-mkcert/dev.pem
 ```

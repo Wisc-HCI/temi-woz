@@ -1,5 +1,5 @@
 // src/pages/ParticipantPage.jsx
-import React, { useEffect, useState } from 'react'
+import React, { useEffect, useState, useRef } from 'react'
 import { connectWebSocket, sendMessageWS } from "../utils/ws";
 import MediaList from '../components/MediaList';
 import { captureAndSend } from "../utils/utils"; 
@@ -14,6 +14,18 @@ const ParticipantAsyncPage = () => {
   const [latestUploadedFile, setLatestUploadedFile] = useState(null);
   const [canRequest, setCanRequest] = useState(true);
   const [requestDeclined, setRequestDeclined] = useState(false);
+  const [captureTriggerBy, setCaptureTriggerBy] = useState(null);
+
+  const captureTriggerByRef = useRef(captureTriggerBy);
+  const canRequestRef = useRef(canRequest);
+
+  useEffect(() => {
+    captureTriggerByRef.current = captureTriggerBy;
+  }, [captureTriggerBy]);
+
+  useEffect(() => {
+    canRequestRef.current = canRequest;
+  }, [canRequest]);
 
   const playChimes = () => {
     const audio = new Audio('/audio/chime.mp3');
@@ -49,14 +61,22 @@ const ParticipantAsyncPage = () => {
         setTimeout(() => setNotification(null), 4000);
         playChimes();
       } else if (data.type === "declined_share") {
+        console.log('declined share')
+        console.log(canRequestRef.current)
+        console.log(captureTriggerByRef.current)
         // only trigger it if the capture was triggered by the tablet
-        if (canRequest === false) {
+        if (canRequestRef.current === false) {
           setCanRequest(true);
-          setRequestDeclined(true);
-          playChimes();
+          if (captureTriggerByRef.current === 'tablet_user') {
+            setRequestDeclined(true);
+            playChimes();
+          }
         }
       } else if (data.type === "initial_status") {
         setBehaviorMode(data.data.behavior_mode);
+      } else if (data.type === "video_capture") {
+        setCanRequest(false);
+        setCaptureTriggerBy('robot_user')
       } else if (data.type === "behavior_mode") {
         setBehaviorMode(data.data);
       } else if (data.command === "displayMode") {
@@ -148,6 +168,7 @@ const ParticipantAsyncPage = () => {
                     onClick={() => {
                       setCanRequest(false);
                       setRequestDeclined(false);
+                      setCaptureTriggerBy('tablet_user');
                       sendMessage({
                         command: "initiate_capture",
                         payload: "video"
@@ -165,7 +186,7 @@ const ParticipantAsyncPage = () => {
                     className="alert alert-success"
                     role="alert"
                   >
-                    The robot is on its way to take a video. You will be notified when the video is ready!
+                    The robot is on its way to take a video. You will be notified when/if the video is shared with you!
                   </div>
                 </div>
               </div>
