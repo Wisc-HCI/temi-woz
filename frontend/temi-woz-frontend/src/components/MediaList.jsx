@@ -8,6 +8,14 @@ export default function MediaList({
 }) {
   const [files, setFiles] = useState([]);
   const [hoveredImage, setHoveredImage] = useState(null);
+  const goToLocation = async (filename) => {
+    const properName = filename.toLowerCase();
+    console.log("Sending goTo for:", properName);
+    sendMessage({
+      command: "goTo",
+      payload: properName,
+    });
+  };
 
   useEffect(() => {
     fetch("http://localhost:8000/api/media-list")
@@ -50,6 +58,7 @@ export default function MediaList({
           {files.map((file, idx) => {
             const isImage = /\.(jpg|jpeg|png|gif)$/i.test(file);
             const isVideo = /\.(mp4|webm)$/i.test(file);
+            const mediaUrl = `http://localhost:8000/media/${file}`;
 
             return (
               <div
@@ -66,14 +75,14 @@ export default function MediaList({
                   flexDirection: "column",
                 }}
               >
-                {isImage && (
-                  <div
-                    style={{ position: "relative", display: "inline-block" }}
-                    onMouseEnter={() => setHoveredImage(file)}
-                    onMouseLeave={() => setHoveredImage(null)}
-                  >
+                <div
+                  style={{ position: "relative", display: "inline-block" }}
+                  onMouseEnter={() => setHoveredImage(file)}
+                  onMouseLeave={() => setHoveredImage(null)}
+                >
+                  {isImage && (
                     <img
-                      src={`http://localhost:8000/media/${file}`}
+                      src={mediaUrl}
                       alt={file}
                       style={{
                         maxWidth: "100%",
@@ -82,12 +91,27 @@ export default function MediaList({
                       }}
                       onClick={() => handleClickWithConfirm(file)}
                     />
+                  )}
 
-                    {hoveredImage === file && (
+                  {isVideo && (
+                    <video
+                      src={mediaUrl}
+                      controls
+                      style={{
+                        maxWidth: "100%",
+                        maxHeight: "200px",
+                        border: displayedMedia === file && "5px solid #0d6efd",
+                      }}
+                      onClick={() => handleClickWithConfirm(file)}
+                    />
+                  )}
+
+                  {hoveredImage === file && (
+                    <>
                       <button
                         onClick={(e) => {
                           e.stopPropagation();
-                          handleSendToLLM(file);
+                          handleSendToLLM(file, isVideo ? "video" : "image");
                         }}
                         style={{
                           position: "absolute",
@@ -103,22 +127,30 @@ export default function MediaList({
                       >
                         Send to LLM
                       </button>
-                    )}
-                  </div>
-                )}
 
-                {isVideo && (
-                  <video
-                    src={`http://localhost:8000/media/${file}`}
-                    controls
-                    style={{
-                      maxWidth: "100%",
-                      maxHeight: "200px",
-                      border: displayedMedia === file && "5px solid #0d6efd",
-                    }}
-                    onClick={() => handleClickWithConfirm(file)}
-                  />
-                )}
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          goToLocation(file);
+                        }}
+                        style={{
+                          position: "absolute",
+                          bottom: "8px",
+                          right: "8px",
+                          backgroundColor: "#0d6efd",
+                          color: "white",
+                          border: "none",
+                          borderRadius: "4px",
+                          padding: "4px 8px",
+                          fontSize: "12px",
+                          cursor: "pointer",
+                        }}
+                      >
+                        Go to Location
+                      </button>
+                    </>
+                  )}
+                </div>
               </div>
             );
           })}

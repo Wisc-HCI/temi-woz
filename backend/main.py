@@ -198,7 +198,7 @@ async def analyze_media(request: AnalyzeRequest):
 
     try:
         with Image.open(file_path) as image:
-            prompt = "Analyze and describe this image."
+            prompt = "Analyze and describe this media."
             result = model.generate_content([prompt, image])
 
         return {"success": True, "analysis": result.text}
