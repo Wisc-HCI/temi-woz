@@ -34,7 +34,7 @@ if not GEMINI_API_KEY:
 genai.configure(api_key=GEMINI_API_KEY)
 model = genai.GenerativeModel("gemini-1.5-flash-002")
 
-genai.configure(api_key="AIzaSyAFEJsWxveuVB-Kj9Nqd2oa3x5os9KAjGs")
+genai.configure(api_key="GEMINI_API_KEY")
 
 # CORS is optional but useful during development
 app.add_middleware(
