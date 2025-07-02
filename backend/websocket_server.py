@@ -1,16 +1,27 @@
 import asyncio
+from dotenv import load_dotenv
 import json
+import os
+import time
 from websockets.asyncio.server import serve
 from fastapi import WebSocketDisconnect
 import signal
 from llm_model import generate_response
+from utils import log_event
 
+
+load_dotenv()
+
+
+ZOOM_JWT = os.environ.get('ZOOM_JWT')
 
 PATH_TEMI = '/temi'
 PATH_CONTROL = '/control'
 PATH_PARTICIPANT = '/participant'
 LOG_FILE = 'participant_data/log.log'
 MESSAGES_FILE = 'participant_data/messages.json'
+UPLOAD_DIR = "participant_data/media"
+MEDIA_INDEX_FILE = os.path.join(UPLOAD_DIR, "display_list.txt")
 
 
 try:
@@ -21,10 +32,6 @@ except Exception as e:
     MESSAGES = []
 
 
-def log_event(event):
-    pass
-
-
 
 '''
 photo, video
@@ -32,7 +39,6 @@ photo, video
     - capture
 '''
 
-PASSIVE = 'passive'
 REACTIVE = 'reactive'
 PROACTIVE = 'proactive'
 
@@ -44,6 +50,9 @@ class WebSocketServer:
             PATH_CONTROL: set(),
             PATH_PARTICIPANT: set()
         }
+        self.zoom_status_call_start = 0
+        self.zoom_status_robot = None
+        self.zoom_status_participant = None
         self.behavior_mode = None
         self.last_displayed = None
         self.messages = self._load_messages()
@@ -66,7 +75,8 @@ class WebSocketServer:
         try:
             while True:
                 message = await websocket.receive_text()
-                print(message)
+                print(message[:100])
+                log_event('received', ws_path, message[:100])
                 if message == '':
                     pass
                 if ws_path == PATH_TEMI:
@@ -87,7 +97,8 @@ class WebSocketServer:
 
     async def send_message(self, group, message):
         # we really just expect one to be in the set
-        print(f'Sending message to {group}: {message}')
+        print(f'Sending message to {group}: {str(message)[:100]}')
+        log_event('sent', group, str(message)[:100])
         for connection in self.connections[group]:
             await connection.send_json(message)
             # try:
@@ -137,16 +148,26 @@ class WebSocketServer:
             self.last_displayed = None
             await self.send_message(PATH_TEMI, msg_json)
 
+        elif msg_json['command'] == 'displayMode':
+            await self.send_message(PATH_TEMI, msg_json)
+            await self.send_message(PATH_PARTICIPANT, msg_json)
+
+        elif msg_json['command'] == 'refreshScreenShot':
+            if msg_json['payload'] == 'temi':
+                await self.send_message(PATH_TEMI, msg_json)
+            elif msg_json['payload'] == 'web':
+                await self.send_message(PATH_PARTICIPANT, msg_json)
+
         elif msg_json['command'] in [
-                'skidJoy', 'takePicture', 'refreshScreenShot',
+                'skidJoy', 'takePicture',
                 'tiltBy', 'tiltAngle', 'stopMovement', 'turnBy',
                 'queryLocations', 'goTo']:
             await self.send_message(PATH_TEMI, msg_json)
 
         elif msg_json['command'] == 'navigateCamera':
-            if self.behavior_mode == PASSIVE:
-                msg_json['payload'] = 'headless'
-                await self.send_message(PATH_TEMI, msg_json)
+            # for this project: whenever its admin capturing,
+            #  we always do it headless
+            msg_json['payload'] = 'headless'
             await self.send_message(PATH_TEMI, msg_json)
 
         elif msg_json['command'] == 'startVideo':
@@ -165,9 +186,48 @@ class WebSocketServer:
                 'data': self.behavior_mode
             }
             await self.send_message(PATH_CONTROL, msg)
+            await self.send_message(PATH_PARTICIPANT, msg)
+            await self.send_message(PATH_TEMI, msg_json)
+
+        elif msg_json['command'] == 'allowCapture':
+            await self.send_message(PATH_PARTICIPANT, msg_json)
+
+        elif msg_json['command'] == 'zoomToken':
+            msg_json['payload'] = ZOOM_JWT
+            await self.send_message(PATH_TEMI, msg_json)
+
+        elif msg_json['command'] == 'video_call':
+            action = msg_json['payload']
+            if action == 'proactive_call':
+                self.zoom_status_robot = 'ringing'
+                self.zoom_status_participant = 'ringing'
+                participant_msg = {
+                    'type': 'video_call',
+                    'data': action
+                }
+                await self.send_message(PATH_TEMI, msg_json)
+                await self.send_message(PATH_PARTICIPANT, participant_msg)
+            elif action == 'end':
+                self.zoom_status_robot = None
+                self.zoom_status_participant = None
+                call_duration = time.time() - self.zoom_status_call_start
+                print(f'Call ended. Lasted {call_duration} seconds.')
+                participant_msg = {
+                    'type': 'video_call',
+                    'data': 'end'
+                }
+                await self.send_message(PATH_TEMI, msg_json)
+                await self.send_message(PATH_PARTICIPANT, participant_msg)
+            elif action == "ending_alert":
+                participant_msg = {
+                    'type': 'video_call',
+                    'data': 'ending_alert'
+                }
+                await self.send_message(PATH_TEMI, msg_json)
+                await self.send_message(PATH_PARTICIPANT, participant_msg)
 
         elif msg_json['command'] == 'identify':
-            if msg_json.get('payload') == 'wizard':
+            if msg_json.get('payload') == 'webpage':
                 msg = {
                     'type': 'initial_status',
                     'data': {
@@ -176,6 +236,20 @@ class WebSocketServer:
                     }
                 }
                 await self.send_message(PATH_CONTROL, msg)
+
+        elif msg_json['command'] == 'zoom_status':
+            call_duration = None
+            if self.zoom_status_robot == 'connected':
+                call_duration = time.time() - self.zoom_status_call_start
+            msg = {
+                'type': 'zoom_status',
+                'data': {
+                    'participant': self.zoom_status_participant,
+                    'robot': self.zoom_status_robot,
+                    'call_duration': call_duration
+                }
+            }
+            await self.send_message(PATH_CONTROL, msg)
 
     async def temi_handler(self, websocket, message):
         try:
@@ -204,7 +278,71 @@ class WebSocketServer:
             print(f"Received locations: {locations}")
             await self.send_message(PATH_CONTROL, msg_json)
 
-        elif msg_json['type'] == 'screenshot':
+        elif msg_json['type'] in [
+                'screenshot', 'snapshot', 'video_recording', 'camera']:
+            await self.send_message(PATH_CONTROL, msg_json)
+
+        elif msg_json['type'] == 'declined_share':
+            await self.send_message(PATH_PARTICIPANT, msg_json)
+
+        elif msg_json['type'] == 'video_capture':
+            await self.send_message(PATH_PARTICIPANT, msg_json)
+
+        elif msg_json['type'] == 'share_media':
+            filename = msg_json['data']
+            with open(MEDIA_INDEX_FILE, "a") as f:
+                f.write(f"{filename}\n")
+
+            await self.send_message(PATH_CONTROL, {
+                "type": "media_uploaded",
+                "filename": filename,
+                "url": f"/view/{filename}"
+            })
+            await self.send_message(PATH_PARTICIPANT, {
+                "type": "media_uploaded",
+                "filename": filename,
+                "url": f"/view/{filename}"
+            })
+
+        elif msg_json['type'] == 'video_call':
+            action = msg_json.get("data")
+            if action == 'start':
+                self.zoom_status_robot = 'calling'
+                self.zoom_status_participant = 'ringing'
+            elif action == 'end':
+                self.zoom_status_robot = None
+                self.zoom_status_participant = None
+                call_duration = time.time() - self.zoom_status_call_start
+                print(f'Call ended. Lasted {call_duration} seconds.')
+            elif action == 'answer':
+                if self.behavior_mode == PROACTIVE:
+                    if self.zoom_status_participant == 'ringing':
+                        self.zoom_status_robot = 'waiting'
+                        return
+                    elif self.zoom_status_participant == 'waiting':
+                        self.zoom_status_robot = 'connected'
+                        self.zoom_status_participant = 'connected'
+                        robot_msg = {
+                            'command': 'video_call',
+                            'payload': 'connected'
+                        }
+                        laptop_msg = {
+                            'type': 'video_call',
+                            'data': 'connected'
+                        }
+                        self.zoom_status_call_start = time.time()
+                        await self.send_message(PATH_PARTICIPANT, laptop_msg)
+                        await self.send_message(PATH_CONTROL, laptop_msg)
+                        await self.send_message(PATH_TEMI, robot_msg)
+                        return
+
+                self.zoom_status_robot = 'connected'
+                self.zoom_status_participant = 'connected'
+                self.zoom_status_call_start = time.time()
+            elif action == 'dismiss':
+                self.zoom_status_robot = None
+                self.zoom_status_participant = None
+            await self.send_message(PATH_PARTICIPANT, msg_json)
             await self.send_message(PATH_CONTROL, msg_json)
 
     async def participant_handler(self, websocket, message):
@@ -219,6 +357,85 @@ class WebSocketServer:
                 'skidJoy', 'tiltBy', 'tiltAngle',
                 'stopMovement', 'turnBy']:
             await self.send_message(PATH_TEMI, msg_json)
+
+        elif msg_json['command'] == 'video_call':
+            if msg_json['payload'] == 'answer':
+                if self.behavior_mode == PROACTIVE:
+                    if self.zoom_status_robot == 'ringing':
+                        self.zoom_status_participant = 'waiting'
+                        return
+                    elif self.zoom_status_robot == 'waiting':
+                        self.zoom_status_robot = 'connected'
+                        self.zoom_status_participant = 'connected'
+                        robot_msg = {
+                            'command': 'video_call',
+                            'payload': 'connected'
+                        }
+                        laptop_msg = {
+                            'type': 'video_call',
+                            'data': 'connected'
+                        }
+                        self.zoom_status_call_start = time.time()
+                        await self.send_message(PATH_PARTICIPANT, laptop_msg)
+                        await self.send_message(PATH_CONTROL, laptop_msg)
+                        await self.send_message(PATH_TEMI, robot_msg)
+                        return
+                else:
+                    self.zoom_status_robot = 'connected'
+                    self.zoom_status_participant = 'connected'
+                    self.zoom_status_call_start = time.time()
+            elif msg_json['payload'] == 'dismiss':
+                self.zoom_status_robot = None
+                self.zoom_status_participant = None
+            elif msg_json['payload'] == 'start':
+                self.zoom_status_participant = 'calling'
+                self.zoom_status_robot = 'ringing'
+            elif msg_json['payload'] == 'end':
+                self.zoom_status_robot = None
+                self.zoom_status_participant = None
+                call_duration = time.time() - self.zoom_status_call_start
+                print(f'Call ended. Lasted {call_duration} seconds.')
+                laptop_msg = {
+                    'type': 'video_call',
+                    'data': 'end'
+                }
+                await self.send_message(PATH_TEMI, msg_json)
+                await self.send_message(PATH_CONTROL, laptop_msg)
+                return
+            await self.send_message(PATH_TEMI, msg_json)
+            await self.send_message(PATH_CONTROL, msg_json)
+
+        elif msg_json['command'] == 'screenshot':
+            msg = {
+                'type': 'screenshot',
+                'data': msg_json['payload']
+            }
+            await self.send_message(PATH_CONTROL, msg)
+
+        elif msg_json['command'] == 'initiate_capture':
+            web_msg = {
+                'type': 'initiate_capture',
+                'data': msg_json['payload']
+            }
+            await self.send_message(PATH_CONTROL, web_msg)
+            # robot msg
+            # for this project: whenever its admin capturing,
+            # we always do it headless
+            robot_msg = {
+                'command': 'navigateCamera',
+                'payload': 'headless'
+            }
+            await self.send_message(PATH_TEMI, robot_msg)
+
+        elif msg_json['command'] == 'identify':
+            if msg_json.get('payload') == 'webpage':
+                msg = {
+                    'type': 'initial_status',
+                    'data': {
+                        'behavior_mode': self.behavior_mode,
+                    }
+                }
+                await self.send_message(PATH_PARTICIPANT, msg)
 
 
 # server = WebSocketServer()

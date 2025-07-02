@@ -9,8 +9,14 @@ const Dashboard = () => {
         <Link to="/wizard" className="btn btn-primary">
           Go to Wizard Interface
         </Link>
-        <Link to="/participant" className="btn btn-primary">
-          Go to Participant Page
+        <Link to="/observer" className="btn btn-primary">
+          Go to Observer Page
+        </Link>
+        <Link to="/participant-sync" className="btn btn-primary">
+          Go to Participant Page (SYNC)
+        </Link>
+        <Link to="/participant-async" className="btn btn-primary">
+          Go to Participant Page (ASYNC)
         </Link>
       </div>
     </div>
