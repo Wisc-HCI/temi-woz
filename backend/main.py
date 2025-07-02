@@ -1,7 +1,14 @@
 import os
 import shutil
+import google.generativeai as genai
+import requests
+from PIL import Image, UnidentifiedImageError
+from io import BytesIO
+from pydantic import BaseModel
+import google.generativeai as genai
+from dotenv import load_dotenv
 import time
-
+]
 from fastapi import (
     FastAPI, WebSocket, WebSocketDisconnect,
     Request, UploadFile, File
@@ -19,11 +26,24 @@ load_dotenv()
 app = FastAPI()
 server = WebSocketServer()
 UPLOAD_DIR = "participant_data/media"
+
+class AnalyzeRequest(BaseModel):
+    image_filename: str
+    mode: str
 MEDIA_INDEX_FILE = os.path.join(UPLOAD_DIR, "display_list.txt")
 ZOOM_JWT = os.environ.get('ZOOM_JWT')
 
 app.mount("/media", StaticFiles(directory=UPLOAD_DIR), name="media")
 
+load_dotenv()
+GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
+if not GEMINI_API_KEY:
+    raise RuntimeError("Missing GEMINI_API_KEY")
+
+genai.configure(api_key=GEMINI_API_KEY)
+model = genai.GenerativeModel("gemini-1.5-flash-002")
+
+genai.configure(api_key="INSERT_API_KEY_HERE")
 
 # CORS is optional but useful during development
 app.add_middleware(
@@ -203,7 +223,7 @@ async def list_media():
     </body>
     </html>
     """
-
+    
 @app.get("/api/media-list")
 async def get_media_list():
     # files = os.listdir(UPLOAD_DIR)
@@ -224,3 +244,29 @@ async def get_media_list():
         media_files = []
 
     return JSONResponse(content={"files": media_files})
+
+@app.post("/api/analyze-media")
+async def analyze_media(request: AnalyzeRequest):
+    file_path = os.path.join(UPLOAD_DIR, request.image_filename)
+
+    if not os.path.exists(file_path):
+        return JSONResponse(content={"success": False, "error": "File not found"}, status_code=404)
+
+    # Choose different prompt based on mode
+    if request.mode == "conversation":
+        prompt = "Start a friendly conversation based on this media."
+    elif request.mode == "suggestion":
+        prompt = "Provide a useful suggestion based on this media."
+    else:
+        prompt = "Analyze and describe this media."  # default fallback
+
+    try:
+        with Image.open(file_path) as image:
+            result = model.generate_content([prompt, image])
+
+        return {"success": True, "analysis": result.text}
+
+    except UnidentifiedImageError:
+        return JSONResponse(content={"success": False, "error": "File is not a valid image"}, status_code=400)
+    except Exception as e:
+        return JSONResponse(content={"success": False, "error": str(e)}, status_code=500)

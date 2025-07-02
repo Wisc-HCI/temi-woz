@@ -1,11 +1,11 @@
 import { useEffect, useState } from "react";
 import { connectWebSocket, sendMessageWS } from "../utils/ws";
-import MediaList from '../components/MediaList';
+import MediaList from "../components/MediaList";
 import { useGamepadControls } from "../utils/useGamepadControls";
 import presetPhrases from "../utils/presetPhrases";
+import LLMPanel from "../components/LLMPanel";
 
 const WizardPage = () => {
-
   const [log, setLog] = useState([]);
   const [inputText, setInputText] = useState("");
   const [pressedButtons, setPressedButtons] = useState([]);
@@ -22,6 +22,29 @@ const WizardPage = () => {
   const [notificationType, setNotificationType] = useState("warning");
   const [latestUploadedFile, setLatestUploadedFile] = useState(null);
   const [displayedMedia, setDisplayedMedia] = useState(null);
+  const [llmResponse, setLlmResponse] = useState("");
+
+  const handleSendToLLM = async (imageFilename, mode) => {
+    try {
+      const res = await fetch("http://localhost:8000/api/analyze-media", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          image_filename: imageFilename,
+          mode: mode || "default",
+        }),
+      });
+      console.log("Sending to LLM with mode:", mode);
+      const data = await res.json();
+      const llmOutput = data.analysis || "No response from LLM";
+      setLlmResponse(llmOutput);
+      setInputText(llmOutput);
+    } catch (error) {
+      setLlmResponse("Error contacting LLM.");
+      console.error(error);
+    }
+  };
+
   const [modalData, setModalData] = useState(null);
   const [canActivateCamera, setCanActivateCamera] = useState(true);
   const [canTakePicture, setCanTakePicture] = useState(false);
@@ -53,11 +76,11 @@ const WizardPage = () => {
 
   useEffect(() => {
     const onWsMessage = (data) => {
-      console.log('onWsMessage')
-      console.log(data)
-      if (data.type === 'asr_result') {
+      console.log("onWsMessage");
+      console.log(data);
+      if (data.type === "asr_result") {
         setLog((prev) => [...prev, `Received: ${data.data}`]);
-      } else if (data.type === 'suggested_response') {
+      } else if (data.type === "suggested_response") {
         setInputText(data.data);
       } else if (data.type === "initial_status") {
         setBehaviorMode(data.data.behavior_mode);
@@ -65,6 +88,7 @@ const WizardPage = () => {
       } else if (data.type === "behavior_mode") {
         setBehaviorMode(data.data);
       } else if (data.type === "media_uploaded") {
+
         if (data.data === 'silent') {
           setTimeout(() => {
             // for this setup, all media is uploaded after capture,
@@ -84,6 +108,7 @@ const WizardPage = () => {
         const locationList = data.data;
         setSavedLocations(locationList);
       } else if (data.type === "screenshot") {
+
         setScreenshotData(
           `data:image/jpeg;base64,${data.data}`
         );
@@ -108,11 +133,12 @@ const WizardPage = () => {
         setCanActivateCamera(false);
         setNotification(`You're up! Tablet requested a ${data.data} from the robot. Go do it! Camera is activated for you already!`)
       }
-    }
+    };
     connectWebSocket(onWsMessage, "control");
   }, []);
 
   useGamepadControls(sendMessage, setPressedButtons);
+
 
   useEffect(() => {
     if (!timerActive) return;
@@ -150,7 +176,7 @@ const WizardPage = () => {
             </button>
           </div>
         </div>
-      )
+      );
     }
 
     const buttonChunks = chunkArray(savedLocations, 3);
@@ -162,9 +188,7 @@ const WizardPage = () => {
               <div className="col-sm-4" key={colIndex}>
                 <button
                   className="btn btn-primary w-100"
-                  onClick={() =>
-                    sendMessage({ command: "goTo", payload: loc })
-                  }
+                  onClick={() => sendMessage({ command: "goTo", payload: loc })}
                 >
                   {loc}
                 </button>
@@ -174,7 +198,8 @@ const WizardPage = () => {
         ))}
       </div>
     );
-  }
+  };
+
 
   const getModeText = () => {
     if (behaviorMode === null) {
@@ -329,7 +354,9 @@ const WizardPage = () => {
                 onChange={(e) => setInputText(e.target.value)}
                 value=""
               >
-                <option value="" disabled>Pick a phrase...</option>
+                <option value="" disabled>
+                  Pick a phrase...
+                </option>
                 {presetPhrases.map((phrase, index) => (
                   <option key={index} value={phrase}>
                     {phrase}
@@ -353,7 +380,7 @@ const WizardPage = () => {
                   if (inputText.trim() !== "") {
                     sendMessage({
                       command: "speak",
-                      payload: inputText.trim()
+                      payload: inputText.trim(),
                     });
                     setLog((prev) => [...prev, `Sent: ${inputText.trim()}`]);
                     setInputText(""); // Clear input
@@ -363,6 +390,7 @@ const WizardPage = () => {
                 Play on Robot
               </button>
             </div>
+
 
 
             <div className="mb-2 mt-4">
@@ -407,19 +435,20 @@ const WizardPage = () => {
           <div className="col-md-8">
 
             <div className="row">
-
               <div className="col-md-7">
                 <h4>Behavioral Modes</h4>
                 <div className="alert alert-info mt-2">
+
                   🤖 Current Mode: <strong>{getModeText()}</strong>
                 </div>
 
                 <div className="row mt-2">
                   <div className="col-sm-6">
-                    <button
-                        className="btn w-100 btn-warning"
-                        onClick={() => sendMessage({
+                      className="btn w-100 btn-warning"
+                      onClick={() =>
+                        sendMessage({
                           command: "changeMode",
+
                           payload: "reactive"
                         })}>
                       User Init.
@@ -427,9 +456,11 @@ const WizardPage = () => {
                   </div>
                   <div className="col-sm-6">
                     <button
-                        className="btn w-100 btn-warning"
-                        onClick={() => sendMessage({
+                      className="btn w-100 btn-warning"
+                      onClick={() =>
+                        sendMessage({
                           command: "changeMode",
+
                           payload: "proactive"
                         })}>
                       Robot Init.
@@ -439,6 +470,7 @@ const WizardPage = () => {
               </div>
 
               <div className="col-md-5">
+
                 {(secondsSinceSnapshot !== null && secondsSinceSnapshot < 30) &&
                   <>
                     <div className="text-muted small mt-1">
@@ -462,8 +494,6 @@ const WizardPage = () => {
               </div>
             </div>
 
-
-
             <h4 className="mt-2">Go To ...</h4>
             {navButtonsBlock()}
 
@@ -472,57 +502,61 @@ const WizardPage = () => {
             <div className="row mt-2">
               <div className="col-sm-3">
                 <button
-                    className={
-                      `btn w-100 ${pressedButtons.includes(14) ?
-                        "btn-success" :
-                        "btn-primary"}`
-                    }
-                    onClick={() => sendMessage({
+                  className={`btn w-100 ${
+                    pressedButtons.includes(14) ? "btn-success" : "btn-primary"
+                  }`}
+                  onClick={() =>
+                    sendMessage({
                       command: "turnBy",
-                      payload: "10"
-                    })}>
+                      payload: "10",
+                    })
+                  }
+                >
                   Left
                 </button>
               </div>
               <div className="col-sm-3">
                 <button
-                    className={
-                      `btn w-100 ${pressedButtons.includes(15) ?
-                        "btn-success" :
-                        "btn-primary"}`
-                    }
-                    onClick={() => sendMessage({
+                  className={`btn w-100 ${
+                    pressedButtons.includes(15) ? "btn-success" : "btn-primary"
+                  }`}
+                  onClick={() =>
+                    sendMessage({
                       command: "turnBy",
-                      payload: "-10"
-                    })}>
+                      payload: "-10",
+                    })
+                  }
+                >
                   Right
                 </button>
               </div>
               <div className="col-sm-3">
                 <button
-                    className={
-                      `btn w-100 ${pressedButtons.includes(12) ?
-                        "btn-success" :
-                        "btn-primary"}`
-                    }
-                    onClick={() => sendMessage({
+                  className={`btn w-100 ${
+                    pressedButtons.includes(12) ? "btn-success" : "btn-primary"
+                  }`}
+                  onClick={() =>
+                    sendMessage({
                       command: "skidJoy",
-                      payload: "(0.5, 0)"
-                    })}>
+                      payload: "(0.5, 0)",
+                    })
+                  }
+                >
                   Forward
                 </button>
               </div>
               <div className="col-sm-3">
                 <button
-                    className={
-                      `btn w-100 ${pressedButtons.includes(13) ?
-                        "btn-success" :
-                        "btn-primary"}`
-                    }
-                    onClick={() => sendMessage({
+                  className={`btn w-100 ${
+                    pressedButtons.includes(13) ? "btn-success" : "btn-primary"
+                  }`}
+                  onClick={() =>
+                    sendMessage({
                       command: "skidJoy",
-                      payload: "(-0.5, 0)"
-                    })}>
+                      payload: "(-0.5, 0)",
+                    })
+                  }
+                >
                   Back
                 </button>
               </div>
@@ -531,6 +565,7 @@ const WizardPage = () => {
             <div className="row mt-2">
               <div className="col-sm-3">
                 <button
+
                     className={
                       `btn w-100 ${pressedButtons.includes(3) ?
                         "btn-success" :
@@ -538,13 +573,16 @@ const WizardPage = () => {
                     }
                     onClick={() => sendMessage({
                       command: "tiltBy",
-                      payload: "5"
-                    })}>
+                      payload: "5",
+                    })
+                  }
+                >
                   Up
                 </button>
               </div>
               <div className="col-sm-3">
                 <button
+
                     className={
                       `btn w-100 ${pressedButtons.includes(0) ?
                         "btn-success" :
@@ -552,38 +590,46 @@ const WizardPage = () => {
                     }
                     onClick={() => sendMessage({
                       command: "tiltBy",
-                      payload: "-5"
-                    })}>
+                      payload: "-5",
+                    })
+                  }
+                >
                   Down
                 </button>
               </div>
               <div className="col-sm-3">
                 <button
-                    className="btn w-100 btn-primary"
-                    onClick={() => sendMessage({
+                  className="btn w-100 btn-primary"
+                  onClick={() =>
+                    sendMessage({
                       command: "tiltAngle",
-                      payload: "0"
-                    })}>
+                      payload: "0",
+                    })
+                  }
+                >
                   👀 ahead
                 </button>
               </div>
               <div className="col-sm-3">
                 <button
-                    className="btn w-100 btn-danger"
-                    onClick={() => sendMessage({
+                  className="btn w-100 btn-danger"
+                  onClick={() =>
+                    sendMessage({
                       command: "stopMovement",
-                      payload: ""
-                    })}>
+                      payload: "",
+                    })
+                  }
+                >
                   STOP
                 </button>
               </div>
             </div>
 
-
             <h4 className="mt-2">Screen</h4>
             <div className="row mt-2">
               <div className="col-sm-6">
                 <button
+
                     disabled={!canActivateCamera}
                     className="btn w-100 btn-primary"
                     onClick={() => {
@@ -599,35 +645,41 @@ const WizardPage = () => {
               </div>
               <div className="col-sm-6">
                 <button
-                    className="btn w-100 btn-primary"
-                    onClick={() => sendMessage({
+                  className="btn w-100 btn-primary"
+                  onClick={() =>
+                    sendMessage({
                       command: "displayFace",
-                      payload: ""
-                    })}>
+                      payload: "",
+                    })
+                  }
+                >
                   Display Face
                 </button>
               </div>
-              
             </div>
 
             <div className="row mt-2">
 {/*              <div className="col-sm-4">
                 <button
-                    className="btn w-100 btn-primary"
-                    disabled={!canTakePicture}
-                    onClick={() => {
-                      sendMessage({
-                        command: "takePicture",
-                        payload: ""
-                      })
-                      setCanTakePicture(false)
-                      setCanStartVideo(false)
-                    }}>
+                  className="btn w-100 btn-primary"
+                  disabled={isRecording}
+                  onClick={() => {
+                    const customName = window.prompt(
+                      "Enter a name for the picture:"
+                    );
+                    sendMessage({
+                      command: "takePicture",
+                      payload: customName || "", // fallback to timestamp
+                    });
+                  }}
+                >
+
                   Take Picture
                 </button>
               </div>*/}
               <div className="col-sm-4">
                 <button
+
                     className="btn w-100 btn-primary"
                     disabled={!canStartVideo}
                     onClick={() => {
@@ -643,6 +695,7 @@ const WizardPage = () => {
               </div>
               <div className="col-sm-4">
                 <button
+
                     className="btn w-100 btn-primary"
                     disabled={!canStopVideo}
                     onClick={() => {
@@ -663,6 +716,7 @@ const WizardPage = () => {
                 </button>
               </div>
             </div>
+
 
 
             <h4 className="mt-2">Participant Web View</h4>
@@ -718,19 +772,31 @@ const WizardPage = () => {
 
           </div>
         </div>
-
-        <div className="row">
-          <div className="col-12">
+        <div className="row" style={{ height: "80vh" }}>
+          <div
+            className="col-md-6"
+            style={{
+              flex: 1,
+              borderRight: "1px solid #ccc",
+              overflowY: "auto",
+              height: "100%",
+            }}
+          >
             <MediaList
               sendMessage={sendMessage}
               newMediaFile={latestUploadedFile}
               displayedMedia={displayedMedia}
+              handleSendToLLM={handleSendToLLM}
             />
+          </div>
+
+          <div className="col-md-6">
+            <LLMPanel response={llmResponse} />
           </div>
         </div>
       </div>
     </div>
   );
-}
+};
 
 export default WizardPage;
