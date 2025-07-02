@@ -107,48 +107,52 @@ export default function MediaList({
                   )}
 
                   {hoveredImage === file && (
-                    <>
+                    <div
+                      style={{
+                        position: "absolute",
+                        top: "8px",
+                        right: "8px",
+                        backgroundColor: "rgba(255, 255, 255, 0.95)",
+                        border: "1px solid #ccc",
+                        borderRadius: "6px",
+                        padding: "6px",
+                        display: "flex",
+                        flexDirection: "column",
+                        gap: "6px",
+                        zIndex: 10,
+                        width: "140px", // consistent button width
+                      }}
+                    >
                       <button
+                        className="btn btn-sm btn-outline-primary w-100"
                         onClick={(e) => {
                           e.stopPropagation();
-                          handleSendToLLM(file, isVideo ? "video" : "image");
-                        }}
-                        style={{
-                          position: "absolute",
-                          top: "8px",
-                          right: "8px",
-                          backgroundColor: "white",
-                          border: "1px solid #ccc",
-                          borderRadius: "4px",
-                          padding: "4px 8px",
-                          fontSize: "12px",
-                          cursor: "pointer",
+                          handleSendToLLM(file, "conversation");
                         }}
                       >
-                        Send to LLM
+                        Start Conversation
                       </button>
 
                       <button
+                        className="btn btn-sm btn-outline-secondary w-100"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleSendToLLM(file, "suggestion");
+                        }}
+                      >
+                        Provide Suggestion
+                      </button>
+
+                      <button
+                        className="btn btn-sm btn-outline-success w-100"
                         onClick={(e) => {
                           e.stopPropagation();
                           goToLocation(file);
                         }}
-                        style={{
-                          position: "absolute",
-                          bottom: "8px",
-                          right: "8px",
-                          backgroundColor: "#0d6efd",
-                          color: "white",
-                          border: "none",
-                          borderRadius: "4px",
-                          padding: "4px 8px",
-                          fontSize: "12px",
-                          cursor: "pointer",
-                        }}
                       >
                         Go to Location
                       </button>
-                    </>
+                    </div>
                   )}
                 </div>
               </div>
