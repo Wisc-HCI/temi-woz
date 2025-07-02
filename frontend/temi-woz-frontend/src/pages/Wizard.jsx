@@ -17,8 +17,23 @@ const WizardPage = () => {
   const [latestUploadedFile, setLatestUploadedFile] = useState(null);
   const [displayedMedia, setDisplayedMedia] = useState(null);
   const [llmResponse, setLlmResponse] = useState("");
+  const [activeMediaContext, setActiveMediaContext] = useState(null);
+  const getTimestamp = () => {
+    return new Date().toLocaleTimeString([], {
+      hour: "2-digit",
+      minute: "2-digit",
+      second: "2-digit",
+    });
+  };
 
   const handleSendToLLM = async (imageFilename, mode) => {
+    setActiveMediaContext({ filename: imageFilename, mode });
+    setLog((prev) => [
+      ...prev,
+      `[${getTimestamp()}]${
+        mode === "conversation" ? "Started conversation" : "Suggested response"
+      } for "${imageFilename}"`,
+    ]);
     try {
       const res = await fetch("http://localhost:8000/api/analyze-media", {
         method: "POST",
@@ -47,6 +62,17 @@ const WizardPage = () => {
       setDisplayedMedia(null);
     }
   };
+
+  useEffect(() => {
+    const storedLog = localStorage.getItem("wizardMessageLog");
+    if (storedLog) {
+      setLog(JSON.parse(storedLog));
+    }
+  }, []);
+
+  useEffect(() => {
+    localStorage.setItem("wizardMessageLog", JSON.stringify(log));
+  }, [log]);
 
   useEffect(() => {
     const onWsMessage = (data) => {
@@ -154,6 +180,24 @@ const WizardPage = () => {
                 <div key={idx}>{line}</div>
               ))}
             </div>
+            <div className="mt-2">
+              <button
+                className="btn btn-outline-secondary w-100"
+                onClick={() => {
+                  const blob = new Blob([log.join("\n")], {
+                    type: "text/plain;charset=utf-8",
+                  });
+                  const url = URL.createObjectURL(blob);
+                  const link = document.createElement("a");
+                  link.href = url;
+                  link.download = `wizard-log-${new Date().toISOString()}.txt`;
+                  link.click();
+                  URL.revokeObjectURL(url);
+                }}
+              >
+                Save Message Log
+              </button>
+            </div>
 
             <div className="mb-2">
               <select
@@ -171,6 +215,22 @@ const WizardPage = () => {
                 ))}
               </select>
             </div>
+
+            {activeMediaContext && (
+              <div
+                style={{
+                  backgroundColor: "#f1f3f5",
+                  borderLeft: "4px solid #0d6efd",
+                  padding: "6px 12px",
+                  borderRadius: "4px",
+                  marginBottom: "8px",
+                  fontSize: "0.85rem",
+                }}
+              >
+                Topic: <strong>{activeMediaContext.filename}</strong> (
+                {activeMediaContext.mode})
+              </div>
+            )}
 
             <div className="input-group mt-2">
               <textarea

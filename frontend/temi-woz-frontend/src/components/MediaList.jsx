@@ -68,13 +68,30 @@ export default function MediaList({
                   maxWidth: "200px",
                   flex: "0 0 auto",
                   cursor: "pointer",
-                  justifyContent: "center",
+                  justifyContent: "flex-start", // aligns content to the top
                   alignItems: "center",
-                  height: "210px",
+                  height: "240px", // increase height to fit label
                   display: "flex",
                   flexDirection: "column",
                 }}
               >
+                {/* Filename shown above image */}
+                <div
+                  style={{
+                    fontSize: "0.75rem",
+                    fontWeight: 500,
+                    color: "#333",
+                    marginBottom: "6px",
+                    maxWidth: "100%",
+                    overflow: "hidden",
+                    textOverflow: "ellipsis",
+                    whiteSpace: "nowrap",
+                  }}
+                  title={file} // show full filename on hover
+                >
+                  {file}
+                </div>
+
                 <div
                   style={{ position: "relative", display: "inline-block" }}
                   onMouseEnter={() => setHoveredImage(file)}
