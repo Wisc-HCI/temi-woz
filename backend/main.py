@@ -23,6 +23,7 @@ UPLOAD_DIR = "participant_data/media"
 
 class AnalyzeRequest(BaseModel):
     image_filename: str
+    mode: str
 
 app.mount("/media", StaticFiles(directory=UPLOAD_DIR), name="media")
 
@@ -34,7 +35,8 @@ if not GEMINI_API_KEY:
 genai.configure(api_key=GEMINI_API_KEY)
 model = genai.GenerativeModel("gemini-1.5-flash-002")
 
-genai.configure(api_key="GEMINI_API_KEY")
+genai.configure(api_key="INSERT_API_KEY_HERE")
+
 
 # CORS is optional but useful during development
 app.add_middleware(
@@ -196,9 +198,16 @@ async def analyze_media(request: AnalyzeRequest):
     if not os.path.exists(file_path):
         return JSONResponse(content={"success": False, "error": "File not found"}, status_code=404)
 
+    # Choose different prompt based on mode
+    if request.mode == "conversation":
+        prompt = "Start a friendly conversation based on this media."
+    elif request.mode == "suggestion":
+        prompt = "Provide a useful suggestion based on this media."
+    else:
+        prompt = "Analyze and describe this media."  # default fallback
+
     try:
         with Image.open(file_path) as image:
-            prompt = "Analyze and describe this image."
             result = model.generate_content([prompt, image])
 
         return {"success": True, "analysis": result.text}

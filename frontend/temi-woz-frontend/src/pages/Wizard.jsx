@@ -18,15 +18,21 @@ const WizardPage = () => {
   const [displayedMedia, setDisplayedMedia] = useState(null);
   const [llmResponse, setLlmResponse] = useState("");
 
-  const handleSendToLLM = async (imageFilename) => {
+  const handleSendToLLM = async (imageFilename, mode) => {
     try {
       const res = await fetch("http://localhost:8000/api/analyze-media", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ image_filename: imageFilename }),
+        body: JSON.stringify({
+          image_filename: imageFilename,
+          mode: mode || "default",
+        }),
       });
+      console.log("Sending to LLM with mode:", mode);
       const data = await res.json();
-      setLlmResponse(data.analysis || "No response from LLM");
+      const llmOutput = data.analysis || "No response from LLM";
+      setLlmResponse(llmOutput);
+      setInputText(llmOutput);
     } catch (error) {
       setLlmResponse("Error contacting LLM.");
       console.error(error);
@@ -434,12 +440,15 @@ const WizardPage = () => {
                 <button
                   className="btn w-100 btn-primary"
                   disabled={isRecording}
-                  onClick={() =>
+                  onClick={() => {
+                    const customName = window.prompt(
+                      "Enter a name for the picture:"
+                    );
                     sendMessage({
                       command: "takePicture",
-                      payload: "",
-                    })
-                  }
+                      payload: customName || "", // fallback to timestamp
+                    });
+                  }}
                 >
                   Take Picture
                 </button>

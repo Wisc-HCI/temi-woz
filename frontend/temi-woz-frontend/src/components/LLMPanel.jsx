@@ -8,7 +8,7 @@ const LLMPanel = ({ response }) => {
         {response ? (
           <div style={styles.response}>{response}</div>
         ) : (
-          <p>No response yet. Click 'Send to LLM' on an image.</p>
+          <p>No response yet. Click 'Send to LLM' on a media.</p>
         )}
       </div>
     </div>
