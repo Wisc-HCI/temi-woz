@@ -37,6 +37,7 @@ model = genai.GenerativeModel("gemini-1.5-flash-002")
 
 genai.configure(api_key="INSERT_API_KEY_HERE")
 
+
 # CORS is optional but useful during development
 app.add_middleware(
     CORSMiddleware,
