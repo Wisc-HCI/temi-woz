@@ -8,6 +8,14 @@ export default function MediaList({
 }) {
   const [files, setFiles] = useState([]);
   const [hoveredImage, setHoveredImage] = useState(null);
+  const goToLocation = async (filename) => {
+    const properName = filename.toLowerCase();
+    console.log("Sending goTo for:", properName);
+    sendMessage({
+      command: "goTo",
+      payload: properName,
+    });
+  };
 
   useEffect(() => {
     fetch("http://localhost:8000/api/media-list")
@@ -50,6 +58,7 @@ export default function MediaList({
           {files.map((file, idx) => {
             const isImage = /\.(jpg|jpeg|png|gif)$/i.test(file);
             const isVideo = /\.(mp4|webm)$/i.test(file);
+            const mediaUrl = `http://localhost:8000/media/${file}`;
 
             return (
               <div
@@ -59,21 +68,38 @@ export default function MediaList({
                   maxWidth: "200px",
                   flex: "0 0 auto",
                   cursor: "pointer",
-                  justifyContent: "center",
+                  justifyContent: "flex-start", // aligns content to the top
                   alignItems: "center",
-                  height: "210px",
+                  height: "240px", // increase height to fit label
                   display: "flex",
                   flexDirection: "column",
                 }}
               >
-                {isImage && (
-                  <div
-                    style={{ position: "relative", display: "inline-block" }}
-                    onMouseEnter={() => setHoveredImage(file)}
-                    onMouseLeave={() => setHoveredImage(null)}
-                  >
+                {/* Filename shown above image */}
+                <div
+                  style={{
+                    fontSize: "0.75rem",
+                    fontWeight: 500,
+                    color: "#333",
+                    marginBottom: "6px",
+                    maxWidth: "100%",
+                    overflow: "hidden",
+                    textOverflow: "ellipsis",
+                    whiteSpace: "nowrap",
+                  }}
+                  title={file} // show full filename on hover
+                >
+                  {file}
+                </div>
+
+                <div
+                  style={{ position: "relative", display: "inline-block" }}
+                  onMouseEnter={() => setHoveredImage(file)}
+                  onMouseLeave={() => setHoveredImage(null)}
+                >
+                  {isImage && (
                     <img
-                      src={`http://localhost:8000/media/${file}`}
+                      src={mediaUrl}
                       alt={file}
                       style={{
                         maxWidth: "100%",
@@ -82,43 +108,70 @@ export default function MediaList({
                       }}
                       onClick={() => handleClickWithConfirm(file)}
                     />
+                  )}
 
-                    {hoveredImage === file && (
+                  {isVideo && (
+                    <video
+                      src={mediaUrl}
+                      controls
+                      style={{
+                        maxWidth: "100%",
+                        maxHeight: "200px",
+                        border: displayedMedia === file && "5px solid #0d6efd",
+                      }}
+                      onClick={() => handleClickWithConfirm(file)}
+                    />
+                  )}
+
+                  {hoveredImage === file && (
+                    <div
+                      style={{
+                        position: "absolute",
+                        top: "8px",
+                        right: "8px",
+                        backgroundColor: "rgba(255, 255, 255, 0.95)",
+                        border: "1px solid #ccc",
+                        borderRadius: "6px",
+                        padding: "6px",
+                        display: "flex",
+                        flexDirection: "column",
+                        gap: "6px",
+                        zIndex: 10,
+                        width: "140px", // consistent button width
+                      }}
+                    >
                       <button
+                        className="btn btn-sm btn-outline-primary w-100"
                         onClick={(e) => {
                           e.stopPropagation();
-                          handleSendToLLM(file);
-                        }}
-                        style={{
-                          position: "absolute",
-                          top: "8px",
-                          right: "8px",
-                          backgroundColor: "white",
-                          border: "1px solid #ccc",
-                          borderRadius: "4px",
-                          padding: "4px 8px",
-                          fontSize: "12px",
-                          cursor: "pointer",
+                          handleSendToLLM(file, "conversation");
                         }}
                       >
-                        Send to LLM
+                        Start Conversation
                       </button>
-                    )}
-                  </div>
-                )}
 
-                {isVideo && (
-                  <video
-                    src={`http://localhost:8000/media/${file}`}
-                    controls
-                    style={{
-                      maxWidth: "100%",
-                      maxHeight: "200px",
-                      border: displayedMedia === file && "5px solid #0d6efd",
-                    }}
-                    onClick={() => handleClickWithConfirm(file)}
-                  />
-                )}
+                      <button
+                        className="btn btn-sm btn-outline-secondary w-100"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleSendToLLM(file, "suggestion");
+                        }}
+                      >
+                        Provide Suggestion
+                      </button>
+
+                      <button
+                        className="btn btn-sm btn-outline-success w-100"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          goToLocation(file);
+                        }}
+                      >
+                        Go to Location
+                      </button>
+                    </div>
+                  )}
+                </div>
               </div>
             );
           })}
