@@ -36,6 +36,10 @@ const WizardPage = () => {
         mode === "conversation" ? "Started conversation" : "Suggested response"
       } for "${imageFilename}"`,
     ]);
+    console.log("Sending to /api/analyze-media:", {
+      image_filename: imageFilename,
+      mode: mode || "default",
+    });
     try {
       const res = await fetch("http://localhost:8000/api/analyze-media", {
         method: "POST",
@@ -238,7 +242,7 @@ const WizardPage = () => {
                 <div key={idx}>{line}</div>
               ))}
             </div>
-            <div className="mt-2">
+            <div className="mt-2 d-flex gap-2">
               <button
                 className="btn btn-outline-secondary w-100"
                 onClick={() => {
@@ -254,6 +258,17 @@ const WizardPage = () => {
                 }}
               >
                 Save Message Log
+              </button>
+
+              <button
+                className="btn btn-outline-info w-100"
+                onClick={() => {
+                  if (window.confirm("Clear and refresh the message log?")) {
+                    setLog([]); // or setLog(await fetchLogFromAPI())
+                  }
+                }}
+              >
+                Refresh Log
               </button>
             </div>
 

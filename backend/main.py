@@ -5,7 +5,6 @@ import requests
 from PIL import Image, UnidentifiedImageError
 from io import BytesIO
 from pydantic import BaseModel
-import google.generativeai as genai
 from dotenv import load_dotenv
 
 from fastapi import (
@@ -34,9 +33,6 @@ if not GEMINI_API_KEY:
 
 genai.configure(api_key=GEMINI_API_KEY)
 model = genai.GenerativeModel("gemini-1.5-flash-002")
-
-genai.configure(api_key="INSERT_API_KEY_HERE")
-
 
 # CORS is optional but useful during development
 app.add_middleware(
