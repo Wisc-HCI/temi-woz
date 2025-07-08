@@ -5,6 +5,7 @@ export default function MediaList({
   newMediaFile,
   displayedMedia,
   handleSendToLLM,
+  temiFiles
 }) {
   const [files, setFiles] = useState([]);
   const [hoveredImage, setHoveredImage] = useState(null);
@@ -97,6 +98,23 @@ export default function MediaList({
                   onMouseEnter={() => setHoveredImage(file)}
                   onMouseLeave={() => setHoveredImage(null)}
                 >
+                {temiFiles.has(file) && (
+                  <span
+                    style={{
+                      position: "absolute",
+                      top:  4,
+                      right: 4,
+                      background: "#0d6efd",
+                      color: "#fff",
+                      padding: "2px 6px",
+                      fontSize: "0.6rem",
+                      borderRadius: "4px",
+                      zIndex: 10
+                    }}
+                  >
+                    Temi
+                  </span>
+                )} 
                   {isImage && (
                     <img
                       src={mediaUrl}

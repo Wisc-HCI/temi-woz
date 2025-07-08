@@ -18,6 +18,9 @@ const WizardPage = () => {
   const [displayedMedia, setDisplayedMedia] = useState(null);
   const [llmResponse, setLlmResponse] = useState("");
   const [activeMediaContext, setActiveMediaContext] = useState(null);
+  const [temiFiles,   setTemiFiles]   = useState(new Set());
+  const [wizardFiles, setWizardFiles] = useState(new Set());
+
   const getTimestamp = () => {
     return new Date().toLocaleTimeString([], {
       hour: "2-digit",
@@ -107,11 +110,28 @@ const WizardPage = () => {
       setDisplayedMedia(data.data.last_displayed);
     } else if (data.type === "behavior_mode") {
       setBehaviorMode(data.data);
-    } else if (data.type === "media_uploaded") {
-      const msg = `✅ Media uploaded: ${data.filename}`;
-      setUploadNotification(msg);
-      setLatestUploadedFile(data.filename); 
-      setTimeout(() => setUploadNotification(null), 3000);
+    } else if (data.type === 'media_uploaded') {
+
+      const { filename, source } = data;
+
+      setUploadNotification(`Media uploaded: ${filename}`);
+      setLatestUploadedFile(filename);
+
+      if (source === 'temi') {
+        setTemiFiles(s => {
+          const next = new Set(s);
+          next.add(filename);
+          return next;
+        });
+      }
+
+      if (source === 'wizard') {
+        setWizardFiles(s => {
+          const next = new Set(s);
+          next.add(filename);
+          return next;
+        });
+      }
     } else if (data.type === "saved_locations") {
       const locationList = data.data;
       setSavedLocations(locationList);
@@ -675,6 +695,7 @@ const WizardPage = () => {
               newMediaFile={latestUploadedFile}
               displayedMedia={displayedMedia}
               handleSendToLLM={handleSendToLLM}
+              temiFiles={temiFiles}
             />
           </div>
 
