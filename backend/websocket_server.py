@@ -47,6 +47,8 @@ class WebSocketServer:
         self.behavior_mode = None
         self.last_displayed = None
         self.messages = self._load_messages()
+        self.locations = []
+        self.automation = False
 
 
     def _load_messages(self):
@@ -102,8 +104,10 @@ class WebSocketServer:
         except Exception as e:
             print(f'[ERROR][control_handler]: {e}')
             return
-        if 'command' not in msg_json:
+        cmd = msg_json.get('command')
+        if not cmd:
             return
+
         if msg_json['command'] == 'speak':
             self.messages.append({
                 'role': 'assistant',
@@ -111,6 +115,11 @@ class WebSocketServer:
             })
             self.save_messages()
             await self.send_message(PATH_TEMI, msg_json)
+            await self.send_message(PATH_CONTROL, {
+                'type': 'assistant_response',
+                'data': msg_json['payload']
+            })
+            return
 
         elif msg_json['command'] == 'generate_response':
             img_path = None
@@ -176,6 +185,21 @@ class WebSocketServer:
                     }
                 }
                 await self.send_message(PATH_CONTROL, msg)
+        elif cmd == 'startAutomation':
+            print("Automation ON")
+            self.automation = True
+            await self.send_message(PATH_CONTROL, {
+                'type': 'automation',
+                'data': True
+            })
+
+        elif cmd == 'stopAutomation':
+            print("Automation OFF")
+            self.automation = False
+            await self.send_message(PATH_CONTROL, {
+                'type': 'automation',
+                'data': False
+            })
 
     async def temi_handler(self, websocket, message):
         try:
@@ -183,22 +207,51 @@ class WebSocketServer:
         except Exception as e:
             print(f'[ERROR][temi_handler]: {e}')
             return
-        if msg_json['type'] == 'asr_result':
-            self.messages.append({
-                'role': 'user',
-                'content': msg_json['data']
+        if msg_json.get("type") == "image" and msg_json.get("data", "").startswith("data:image"):
+            import base64
+            from pathlib import Path
+
+            base64_data = msg_json["data"].split(",")[1]
+            filename = msg_json["filename"]
+
+            media_path = Path("participant_data/media") / filename
+            media_path.write_bytes(base64.b64decode(base64_data))
+            print(f"✅ [temi_handler] Saved image to {media_path}")
+
+            self.last_displayed = filename
+            await self.send_message(PATH_CONTROL, {
+                "type": "newMedia",
+                "data": filename
             })
+        if msg_json['type'] == 'assistant_response':
+            await self.send_message(PATH_CONTROL, msg_json)
+            print(f"[temi_handler] Received message: {msg_json}")
+
+        elif msg_json['type'] == 'asr_result':
+            user_text = msg_json['data']
+            self.messages.append({'role': 'user','content': user_text})
             self.save_messages()
             await self.send_message(PATH_CONTROL, msg_json)
-            # generate response from gpt and send to controller dashboard
+
             res = generate_response(self.messages)
             if res:
-                msg_2 = {
+                await self.send_message(PATH_CONTROL, {
                     'type': 'suggested_response',
                     'data': res
-                }
-                await self.send_message(PATH_CONTROL, msg_2)
-        
+                })
+
+                if self.automation:
+                    await self.send_message(PATH_TEMI, {
+                        'command': 'speak',
+                        'payload': res
+                    })
+                    await self.send_message(PATH_CONTROL, {
+                        'type': 'assistant_response',
+                        'data': res
+                    })
+                    await self.send_message(PATH_TEMI, {
+                        'type': 'start_listening'
+                    })
         elif msg_json['type'] == 'saved_locations':
             locations = msg_json.get("data", [])
             print(f"Received locations: {locations}")
@@ -206,6 +259,14 @@ class WebSocketServer:
 
         elif msg_json['type'] == 'screenshot':
             await self.send_message(PATH_CONTROL, msg_json)
+        
+        elif msg_json['type'] == 'saved_locations':
+            self.locations = msg_json.get("data", [])
+            print(f"Received locations: {self.locations}")
+            await self.send_message(PATH_CONTROL, {
+                "type": "locationList",
+                "data": self.locations
+            })
 
     async def participant_handler(self, websocket, message):
         try:
@@ -221,6 +282,23 @@ class WebSocketServer:
             await self.send_message(PATH_TEMI, msg_json)
 
 
+server = WebSocketServer()
+
+async def websocket_main():
+    async def handler(websocket, path):
+        print(f"[INFO] WebSocket requested path: {path}")
+
+        path = path.rstrip('/').split('?')[0]
+
+        if path not in [PATH_TEMI, PATH_CONTROL, PATH_PARTICIPANT]:
+            print(f"[ERROR] Unknown path {path}")
+            await websocket.close()
+            return
+        
+        await server.handle_connection(websocket, path)
+
+if __name__ == "__main__":
+    asyncio.run(websocket_main())
 # server = WebSocketServer()
 # async def websocket_main():
 #     async def handler(websocket):
