@@ -49,6 +49,7 @@ class WebSocketServer:
         self.messages = self._load_messages()
         self.locations = []
         self.automation = False
+        self.last_source = None
 
 
     def _load_messages(self):
@@ -107,6 +108,10 @@ class WebSocketServer:
         cmd = msg_json.get('command')
         if not cmd:
             return
+        if cmd == 'takePicture':
+            self.last_source = 'wizard'
+            await self.send_message(PATH_TEMI, msg_json)
+            return
 
         if msg_json['command'] == 'speak':
             self.messages.append({
@@ -147,10 +152,19 @@ class WebSocketServer:
             await self.send_message(PATH_TEMI, msg_json)
 
         elif msg_json['command'] in [
-                'skidJoy', 'takePicture', 'refreshScreenShot',
+                'skidJoy', 'refreshScreenShot',
                 'tiltBy', 'tiltAngle', 'stopMovement', 'turnBy',
                 'queryLocations', 'goTo']:
             await self.send_message(PATH_TEMI, msg_json)
+            
+        elif msg_json['command'] == 'takePicture':
+            await self.send_message(PATH_TEMI, msg_json)
+            await self.send_message(PATH_CONTROL, {
+                "type":     "media_uploaded",
+                "filename": msg_json["payload"] or "<timestamp>",
+                "source":   "wizard"
+            })
+
 
         elif msg_json['command'] == 'navigateCamera':
             if self.behavior_mode == PASSIVE:
@@ -217,11 +231,14 @@ class WebSocketServer:
             media_path = Path("participant_data/media") / filename
             media_path.write_bytes(base64.b64decode(base64_data))
             print(f"✅ [temi_handler] Saved image to {media_path}")
-
+            source = self.last_source or 'temi'
+            # reset the flag
+            self.last_source = None
             self.last_displayed = filename
             await self.send_message(PATH_CONTROL, {
-                "type": "newMedia",
-                "data": filename
+                "type": "media_uploaded",
+                "filename": filename, 
+                "source": source
             })
         if msg_json['type'] == 'assistant_response':
             await self.send_message(PATH_CONTROL, msg_json)
