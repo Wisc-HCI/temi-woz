@@ -40,6 +40,7 @@ const ParticipantSyncPage = () => {
       } else if (data.type === "video_call") {
         if (data.data === 'start') {
           setVideoCallStatus('ringing');
+          playRingtoneWithPause();
         } else if (data.data === 'end') {
           setVideoCallStatus(null);
           setShowZoomUI(false);
